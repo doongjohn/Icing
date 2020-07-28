@@ -3,24 +3,10 @@
 
 using System;
 using System.Collections.Generic;
-using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.AI;
-using UnityEngine.Assertions.Must;
 
 namespace Icing
 {
-    [Serializable]
-    public class MovementCurve
-    {
-        public AnimationCurve curve;
-        public float curTime;
-
-        public float Value => curve.Evaluate(curTime);
-        public float EndTime => curve.keys[curve.length - 1].time;
-        public bool IsEnded => curve.keys[curve.length - 1].time <= curTime;
-    }
-
     public class BPCC_BodyData
     {
         public Transform transform;
@@ -30,6 +16,14 @@ namespace Icing
 
         // Wrold space size
         public Vector2 Size => transform.lossyScale * colliderSize;
+
+        public void Init(Transform transform, Rigidbody2D rb2D, BoxCollider2D collider, Vector2 colliderSize)
+        {
+            this.transform = transform;
+            this.rb2D = rb2D;
+            this.collider = collider;
+            this.colliderSize = colliderSize;
+        }
     }
 
     [Serializable]
@@ -143,6 +137,7 @@ namespace Icing
             // 2. 벽이 진행 방향의 위에 있으면 머리가 벽에 낌.
             // 3. 벽이 진행 방향의 앞에 있으면 에어본 됨.
             // 4. 최고 경사 보다 높은 경사의 위에 있을 때 경사를 내려갈 수 없음.
+            // 5. Y 크기를 동적으로 바꾸면 땅감지 이상하게 됨.
 
             RaycastHit2D finalHitData = new RaycastHit2D();
             Vector2 halfSize = bodyData.Size * 0.5f;
@@ -380,23 +375,18 @@ namespace Icing
                 return;
             }
 
-            void GetDir(ref int dir, KeyCode _plusKey, KeyCode _minusKey)
-            {
-                if (Input.GetKeyDown(_plusKey))
-                    dir = 1;
-                if (Input.GetKeyDown(_minusKey))
-                    dir = -1;
+            if (Input.GetKeyDown(plusKey))
+                inputDir = 1;
+            if (Input.GetKeyDown(minusKey))
+                inputDir = -1;
 
-                if (Input.GetKey(_minusKey) && Input.GetKeyUp(_plusKey))
-                    dir = -1;
-                if (Input.GetKey(_plusKey) && Input.GetKeyUp(_minusKey))
-                    dir = 1;
+            if (Input.GetKey(minusKey) && Input.GetKeyUp(plusKey))
+                inputDir = -1;
+            if (Input.GetKey(plusKey) && Input.GetKeyUp(minusKey))
+                inputDir = 1;
 
-                if (!Input.GetKey(_plusKey) && !Input.GetKey(_minusKey))
-                    dir = 0;
-            }
-
-            GetDir(ref inputDir, plusKey, minusKey);
+            if (!Input.GetKey(plusKey) && !Input.GetKey(minusKey))
+                inputDir = 0;
         }
         public void ResetInput()
         {
@@ -420,6 +410,7 @@ namespace Icing
                 }
             }
 
+            // TODO
             // Do accel, decel, etc... calculation here
             WalkVector = WalkDir * walkSpeed;
         }
