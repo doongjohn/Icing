@@ -11,15 +11,17 @@ public class OrangePlayer : MonoBehaviour
     [SerializeField] private BPCC_Walk walk = new BPCC_Walk();
     [SerializeField] private BPCC_Jump jump = new BPCC_Jump();
 
+    // Movement Vector
     private Vector2 controlVector;
     private Vector2 externalVector;
 
     private void Awake()
     {
-        bodyData.transform = transform;
-        bodyData.collider = GetComponent<BoxCollider2D>();
-        bodyData.colliderSize = bodyData.collider.size;
-        bodyData.rb2D = GetComponent<Rigidbody2D>();
+        bodyData.Init(
+            transform:    transform,
+            collider:     GetComponent<BoxCollider2D>(),
+            colliderSize: bodyData.collider.size,
+            rb2D:         GetComponent<Rigidbody2D>());
 
         gravity.Init(
             bodyData,
@@ -29,9 +31,9 @@ public class OrangePlayer : MonoBehaviour
         groundDetection.Init(
             bodyData,
             maxDetectCount: 50,
-            maxWalkAngle: 89,
-            snapLength: 0.1f,
-            innerGap: 0.1f);
+            maxWalkAngle:   89,
+            snapLength:     0.1f,
+            innerGap:       0.1f);
 
         walk.Init(walkSpeed: 15);
 
@@ -77,10 +79,6 @@ public class OrangePlayer : MonoBehaviour
                 controlVector.y = jump.JumpVelocity.Value;
         }
 
-        //// Check Slide Down
-        //if (groundDetection.OnGround)
-        //    groundDetection.SlideDown(gravity.gravityAccel, gravity.maxFallSpeed);
-
         // Apply Slide Vector
         if (groundDetection.OnSteepSlope)
         {
@@ -105,10 +103,10 @@ public class OrangePlayer : MonoBehaviour
 
             // Detect Ground
             groundDetection.DetectGround(
-                !jump.IsJumping,
-                gravity.gravityAccel,
-                gravity.maxFallSpeed,
-                new List<Collider2D>());
+                detectCondition: !jump.IsJumping,
+                slideAccel:      gravity.gravityAccel,
+                maxSlideSpeed:   gravity.maxFallSpeed,
+                ignoreGrounds:   new List<Collider2D>());
         }
     }
 }
