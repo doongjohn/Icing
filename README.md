@@ -2,8 +2,15 @@
 Some useful scripts for Unity game development
 
 ## Scripts
-- Object pooling (0%)
 - 2D Platformer Character Controller (60%)
-- State Machine (40%)
 - UI Components (0%)
-- Helpers (Math, LayerMask, etc...)
+- Helpers
+  - State Machine (40%)
+  - Object pooling (0%)
+  - Timer (100%)
+  - Etc...
+
+## TODO
+- Use [OpenUPM](https://openupm.com) format
+- Fix bugs
+- Add more useful scripts (visual/sound effects, save/load manager, etc...)
