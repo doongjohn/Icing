@@ -46,6 +46,7 @@ public class OrangePlayer : MonoBehaviour
     }
     private void FixedUpdate()
     {
+        // Reset Movement Vector
         controlVector = Vector2.zero;
         externalVector = Vector2.zero;
 

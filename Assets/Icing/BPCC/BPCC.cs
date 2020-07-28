@@ -86,7 +86,6 @@ namespace Icing
         private RaycastHit2D[] hitArray;
         private BPCC_GroundData groundData;
         private Transform tf;
-        private Rigidbody2D rb2D;
         private Vector2 prevPos;
 
         public Vector2 slideDownVector;
@@ -95,8 +94,7 @@ namespace Icing
         public BPCC_GroundData GroundData => groundData;
         public bool OnGround
         { get; private set; } = false;
-        public bool OnSteepSlope
-        { get; private set; } = false;
+        public bool OnSteepSlope => slideDownVector != Vector2.zero;
 
         public void Init(
             BPCC_BodyData bodyData,
@@ -113,22 +111,30 @@ namespace Icing
 
             hitArray = new RaycastHit2D[maxDetectCount];
             tf = bodyData.transform;
-            rb2D = bodyData.rb2D;
-
-            bodyData.collider.size = bodyData.collider.size.Add(y: -innerGap);
-            bodyData.collider.offset = bodyData.collider.offset.Change(y: innerGap * 0.5f);
 
             prevPos = tf.position;
+        }
+
+        public void ApplyInnerGap()
+        {
+            bodyData.collider.size = bodyData.colliderSize.Add(y: -innerGap);
+            bodyData.collider.offset = new Vector2(0, innerGap * 0.5f);
+        }
+        public void ResetInnerGap()
+        {
+            bodyData.collider.size = bodyData.colliderSize;
+            bodyData.collider.offset = Vector2.zero;
         }
 
         public void ResetData()
         {
             OnGround = false;
-            OnSteepSlope = false;
             slideDownVector = Vector2.zero;
 
             groundData.Reset();
             Array.Clear(hitArray, 0, hitArray.Length);
+
+            ResetInnerGap();
         }
         public void DetectGround(bool detectCondition, float slideAccel, float maxSlideSpeed, List<Collider2D> ignoreGrounds)
         {
@@ -141,17 +147,19 @@ namespace Icing
 
             RaycastHit2D finalHitData = new RaycastHit2D();
             Vector2 halfSize = bodyData.Size * 0.5f;
-            Vector2 vel = rb2D.velocity;
+            Vector2 vel = bodyData.rb2D.velocity;
             bool inValley = false;
 
             if (!detectCondition)
                 goto SET_GROUND_DATA;
 
+            ApplyInnerGap();
+
             #region Current Data
 
             Vector2 pos = tf.position;
             Vector2 size = bodyData.Size;
-            Vector2 velDir = rb2D.velocity.normalized;
+            Vector2 velDir = bodyData.rb2D.velocity.normalized;
             float moveDirX = vel.x.Sign0();
 
             #endregion
@@ -306,7 +314,6 @@ namespace Icing
 
                 #region Slide Down
 
-                OnSteepSlope = false;
                 slideDownVector = Vector2.zero;
 
                 if (groundData.normal.Value.x != 0)
@@ -315,7 +322,6 @@ namespace Icing
 
                     if (groundAngle > maxWalkAngle && !Mathf.Approximately(groundAngle, maxWalkAngle))
                     {
-                        OnSteepSlope = true;
                         Vector2 slideDir = Vector3.Cross(groundData.normal.Value.x > 0 ? Vector3.forward : Vector3.back, (Vector3)groundData.normal).normalized;
                         slideDownVector = slideDir * Mathf.Max(vel.y + (slideAccel * Time.deltaTime), maxSlideSpeed);
                     }
