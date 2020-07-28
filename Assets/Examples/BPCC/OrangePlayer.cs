@@ -18,25 +18,23 @@ public class OrangePlayer : MonoBehaviour
     private void Awake()
     {
         bodyData.Init(
-            transform:    transform,
-            collider:     GetComponent<BoxCollider2D>(),
-            colliderSize: bodyData.collider.size,
-            rb2D:         GetComponent<Rigidbody2D>());
-
+            transform: transform,
+            rb2D:      GetComponent<Rigidbody2D>(),
+            collider:  GetComponent<BoxCollider2D>()
+        );
         gravity.Init(
             bodyData,
             gravityAccel: -40,
-            maxFallSpeed: -30);
-
+            maxFallSpeed: -30
+        );
         groundDetection.Init(
             bodyData,
             maxDetectCount: 50,
             maxWalkAngle:   89,
             snapLength:     0.1f,
-            innerGap:       0.1f);
-
+            innerGap:       0.1f
+        );
         walk.Init(walkSpeed: 15);
-
         jump.Init(bodyData);
 
         StartCoroutine(LateFixedUpdate());

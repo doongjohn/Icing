@@ -17,12 +17,12 @@ namespace Icing
         // Wrold space size
         public Vector2 Size => transform.lossyScale * colliderSize;
 
-        public void Init(Transform transform, Rigidbody2D rb2D, BoxCollider2D collider, Vector2 colliderSize)
+        public void Init(Transform transform, Rigidbody2D rb2D, BoxCollider2D collider)
         {
             this.transform = transform;
             this.rb2D = rb2D;
             this.collider = collider;
-            this.colliderSize = colliderSize;
+            this.colliderSize = collider.size;
         }
     }
 
