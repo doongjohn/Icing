@@ -435,7 +435,7 @@ namespace Icing
                 }
                 else
                 {
-                    WalkDir = Vector3.Cross(inputDir == 1 ? Vector3.back : Vector3.forward, (Vector3)groundData.normal).normalized;
+                    WalkDir = Vector3.Cross(inputDir == 1 ? Vector3.back : Vector3.forward, groundData.normal.Value).normalized;
                 }
             }
 
