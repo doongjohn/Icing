@@ -82,7 +82,6 @@ namespace Icing
         }
 
         [SerializeField] private int maxDetectCount = 50;
-        [SerializeField] private float downSlopeDetectDist = 0.001f;
         [SerializeField] private float maxWalkAngle = 70f;
         [SerializeField] private float snapLength = 0.1f;
         [SerializeField] private float innerGap = 0.1f;
@@ -100,28 +99,26 @@ namespace Icing
         public BPCC_GroundData GroundData => groundData;
         public bool OnGround
         { get; private set; } = false;
-        public bool OnSteepSlope => slideDownVector != Vector2.zero;
+        public bool OnSteepSlope
+        { get; private set; } = false;
 
         /// <summary>
         /// Initialize Ground Detection
         /// </summary>
         /// <param name="bodyData">BodyData of the character.</param>
         /// <param name="maxDetectCount">Capacity of the BoxCast hit result array.</param>
-        /// <param name="downSlopeDetectDist">Distance for detecting down slope. (Increase this if the chracter can't snap to some slopes.)</param>
         /// <param name="maxWalkAngle">If a ground angle is bigger than maxWalkAngle, character will slide down.</param>
         /// <param name="snapLength">If the character and ground are closer than or equal to snapLength, character will snap to the ground.</param>
         /// <param name="innerGap">BoxCollider's size.y will shrink. (Increase this if the character can't climb a slope.)</param>
         public void Init(
             BPCC_BodyData bodyData,
             int maxDetectCount,
-            float downSlopeDetectDist,
             float maxWalkAngle,
             float snapLength,
             float innerGap)
         {
             this.bodyData = bodyData;
             this.maxDetectCount = Mathf.Max(maxDetectCount, 0);
-            this.downSlopeDetectDist = Mathf.Max(downSlopeDetectDist, float.Epsilon);
             this.maxWalkAngle = Mathf.Clamp(maxWalkAngle, 0, 89);
             this.snapLength = Mathf.Max(snapLength, 0);
             this.innerGap = Mathf.Max(innerGap, 0);
@@ -147,6 +144,7 @@ namespace Icing
         public void ResetData()
         {
             OnGround = false;
+            OnSteepSlope = false;
             slideDownVector = Vector2.zero;
 
             groundData.Reset();
@@ -158,25 +156,27 @@ namespace Icing
         {
             // FIXME
             // 1. 벽이 진행 방향의 위에 있으면 머리가 벽에 낌.
-            // 2. 벽이 진행 방향의 앞에 있으면 에어본 됨.
-            // 3. 최고 경사 보다 높은 경사의 위에 있을 때 경사를 내려갈 수 없음.
-
-            RaycastHit2D finalHitData = new RaycastHit2D();
-            Vector2 halfSize = bodyData.Size * 0.5f;
-            Vector2 vel = bodyData.rb2D.velocity;
-            bool inValley = false;
+            // 2. 벽이 진행 방향의 앞에 벽에 낌.
 
             if (!detectCondition)
-                goto SET_GROUND_DATA;
+            {
+                ResetData();
+                goto END;
+            }
 
             ApplyInnerGap();
 
             #region Current Data
 
+            RaycastHit2D finalHitData = new RaycastHit2D();
+
+            float contactOffset = Physics2D.defaultContactOffset;
             Vector2 pos = tf.position;
-            Vector2 size = bodyData.Size;
+            Vector2 size = bodyData.Size.Add(amount: contactOffset);
+            Vector2 halfSize = size * 0.5f;
+            Vector2 vel = bodyData.rb2D.velocity;
             Vector2 velDir = bodyData.rb2D.velocity.normalized;
-            float moveDirX = vel.x.Sign0();
+            bool inValley = false;
 
             #endregion
 
@@ -184,44 +184,48 @@ namespace Icing
 
             RaycastHit2D nextHit = Physics2D.BoxCast(pos, size, 0f, velDir, vel.magnitude * Time.deltaTime, groundLayer);
             Vector2 nextVector = nextHit.collider == null ? vel * Time.deltaTime : velDir * nextHit.distance;
-            Vector2 nextPos = pos + nextVector;
             float nextDistY = Mathf.Abs(nextVector.y);
-            float nextDistX = Mathf.Abs(nextVector.x);
 
             #endregion
 
             #region Previous Frame Data
 
             Vector2 prevVector = pos - prevPos;
+            int prevDirX = prevVector.x.Sign0();
             float prevDistY = Mathf.Abs(prevVector.y);
             float prevDistX = Mathf.Abs(prevVector.x);
 
             #endregion
 
-            #region Get Ground Data
+            #region Get Ground Method
 
-            RaycastHit2D GetHighestGround(BoxCastData castData, Func<RaycastHit2D, bool> skipCondition)
+            RaycastHit2D GetHighestGround(BoxCastData castData, Func<RaycastHit2D, bool> skipCondition = null)
             {
                 RaycastHit2D hitData = finalHitData;
                 for (int i = 0; i < Physics2D.BoxCastNonAlloc(castData.pos, castData.size, 0f, castData.dir, hitArray, castData.dist, groundLayer); i++)
                 {
-                    if (ignoreGrounds.Contains(hitArray[i].collider) || hitArray[i].normal.y <= 0 || skipCondition(hitArray[i]))
+                    if (ignoreGrounds.Contains(hitArray[i].collider)
+                    ||  hitArray[i].normal.y <= 0
+                    ||  (skipCondition?.Invoke(hitArray[i]) ?? false))
                         continue;
 
-                    if (hitArray[i].point.y >= hitData.point.y || hitData.collider == null)
+                    if (hitArray[i].point.y >= hitData.point.y
+                    ||  hitData.collider == null)
                         hitData = hitArray[i];
                 }
                 return hitData;
             }
             void GetGround_StraightDown()
             {
+                Debug.Log("(GroundDetection) Try StraightDown");
+
                 RaycastHit2D hitData = GetHighestGround(
                     new BoxCastData()
                     {
-                        pos = pos.Add(y: innerGap),
+                        pos = pos.Add(y: size.y),
                         size = size,
                         dir = Vector2.down,
-                        dist = snapLength + innerGap + nextDistY
+                        dist = size.y + snapLength + Mathf.Max(nextDistY, prevDistY)
                     },
                     (hit) => hit.point.y > pos.y - halfSize.y + innerGap);
 
@@ -229,55 +233,50 @@ namespace Icing
                     return;
 
                 finalHitData = hitData;
-                Debug.Log("(Ground Detection) StraightDown");
+                Debug.Log("(GroundDetection) StraightDown");
             }
             void GetGround_DownSlope()
             {
-                float downDist = 
-                    prevDistY != 0 
-                    ? prevDistY
-                    : downSlopeDetectDist /*float.Epsilon*/;
+                Debug.Log("(GroundDetection) Try DownSlope");
 
                 RaycastHit2D hitData = GetHighestGround(
                     new BoxCastData()
                     {
-                        pos = pos.Add(y: -downDist * 0.5f),
-                        size = size.Add(y: downDist),
-                        dir = Vector2.left * moveDirX,
-                        dist = Mathf.Max(prevDistX, nextDistX)
-                    },
-                    (hit) => hit.point.y > pos.y - halfSize.y + innerGap);
+                        pos = pos.Add(y: -contactOffset),
+                        size = size.Add(y: contactOffset * 2),
+                        dir = Vector2.left * prevVector.x,
+                        dist = prevDistX
+                    });
 
                 if (hitData.collider == null)
                     return;
 
-                if (OnGround && hitData.normal == groundData.normal)
-                    return;
+                // 낮은 경사의 오차를 해결하기 위함.
+                if (hitData.normal.x == 0)
+                    hitData.normal = hitData.normal.Change(x: Mathf.Sign(prevVector.x) * float.Epsilon);
 
                 finalHitData = hitData;
-                Debug.Log("(Ground Detection) DownSlope");
+                Debug.Log("(GroundDetection) DownSlope\n" + hitData.normal.x);
+                Debug.DrawRay(hitData.point, hitData.normal, Color.red);
             }
             void GetGround_Cross()
             {
-                BoxCastData castData = new BoxCastData()
-                {
-                    pos = pos.Change(y: Mathf.Min(nextPos.y, prevPos.y)),
-                    size = size,
-                    dir = Vector2.left * moveDirX,
-                    dist = nextDistX
-                };
-
-                Debug.DrawRay(pos.Change(y: prevPos.y), Vector2.left * moveDirX * nextDistX, Color.red);
+                Debug.Log("(GroundDetection) Try Cross");
 
                 RaycastHit2D hitData = GetHighestGround(
-                    castData,
-                    (hit) => false);
+                    new BoxCastData()
+                    {
+                        pos = pos.Change(y: prevPos.y),
+                        size = size,
+                        dir = Vector2.left * prevVector.x,
+                        dist = prevDistX
+                    });
 
                 if (hitData.collider == null)
                     return;
 
                 finalHitData = hitData;
-                Debug.Log("(Ground Detection) Cross\n" + hitData.collider.name);
+                Debug.Log("(GroundDetection) Cross\n" + hitData.collider.name);
             }
             void CheckValley()
             {
@@ -295,33 +294,24 @@ namespace Icing
                 inValley = hitR.collider != null && hitL.collider != null;
             }
 
-            #region Detect Ground
+            #endregion
 
-            if (vel.x != 0)
-            {
-                if (OnGround && groundData.normal.Value.x * moveDirX < 0)
-                {
-                    GetGround_Cross();
-                }
-                else
-                {
-                    GetGround_StraightDown();
-                    if (finalHitData.collider == null)
-                        GetGround_DownSlope();
-                }
-            }
-            if (finalHitData.collider == null)
-                GetGround_StraightDown();
+            #region Get Ground Data
+
+            if (prevDistX != 0)
+                GetGround_DownSlope();
+
+            GetGround_StraightDown();
+
+            if (finalHitData.collider == null && OnGround && prevVector.y > 0)
+                GetGround_Cross();
 
             CheckValley();
 
             #endregion
 
-            #endregion
-
             #region Set Ground Data
 
-        SET_GROUND_DATA:
             if (finalHitData.collider == null)
             {
                 ResetData();
@@ -337,6 +327,7 @@ namespace Icing
 
                 #region Slide Down
 
+                OnSteepSlope = false;
                 slideDownVector = Vector2.zero;
 
                 if (groundData.normal.Value.x != 0)
@@ -345,8 +336,10 @@ namespace Icing
 
                     if (groundAngle > maxWalkAngle && !Mathf.Approximately(groundAngle, maxWalkAngle))
                     {
-                        Vector2 slideDir = Vector3.Cross(groundData.normal.Value.x > 0 ? Vector3.forward : Vector3.back, (Vector3)groundData.normal).normalized;
-                        slideDownVector = slideDir * Mathf.Max(vel.y + (slideAccel * Time.deltaTime), maxSlideSpeed);
+                        OnSteepSlope = true;
+                        slideDownVector = 
+                            Vector3.Cross(groundData.normal.Value.x > 0 ? Vector3.forward : Vector3.back, groundData.normal.Value).normalized *
+                            Mathf.Max(vel.y + (slideAccel * Time.deltaTime), maxSlideSpeed);
                     }
                 }
 
@@ -354,22 +347,29 @@ namespace Icing
 
                 #region Snap To Ground
 
-                // Snap Y
-                tf.position = tf.position.Change(y: halfSize.y + groundData.hitPoint.Value.y);
+                Vector3 snapPos = tf.position;
 
+                // Snap Y
+                snapPos.y = groundData.hitPoint.Value.y + halfSize.y;
+                
                 // Snap X
-                if (groundData.normal.Value.x != 0 && vel.x != 0)
+                if (groundData.normal.Value.x != 0 && prevDirX != 0)
                 {
-                    tf.position = tf.position.Change(x: groundData.hitPoint.Value.x + (halfSize.x * Mathf.Sign(groundData.normal.Value.x)));
+                    snapPos.x = groundData.hitPoint.Value.x + ((OnSteepSlope ? halfSize.x + contactOffset : halfSize.x) * Mathf.Sign(groundData.normal.Value.x));
+                    Debug.DrawRay(groundData.hitPoint.Value, groundData.normal.Value * 2f, Color.cyan);
                 }
+
+                // Snap
+                tf.position = snapPos;
 
                 #endregion
             }
-            
-            // Update Previous Position
-            prevPos = tf.position;
 
             #endregion
+
+        END:
+            // Update Previous Position
+            prevPos = tf.position;
         }
     }
 

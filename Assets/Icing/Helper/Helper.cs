@@ -62,10 +62,23 @@ namespace Icing
             return vec;
         }
 
+        public static Vector2 Add(this Vector2 vec, float amount)
+        {
+            vec.x += amount;
+            vec.y += amount;
+            return vec;
+        }
         public static Vector2 Add(this Vector2 vec, float? x = null, float? y = null)
         {
             if (x.HasValue) vec.x += x.Value;
             if (y.HasValue) vec.y += y.Value;
+            return vec;
+        }
+        public static Vector3 Add(this Vector3 vec, float amount)
+        {
+            vec.x += amount;
+            vec.y += amount;
+            vec.z += amount;
             return vec;
         }
         public static Vector3 Add(this Vector3 vec, float? x = null, float? y = null, float? z = null)

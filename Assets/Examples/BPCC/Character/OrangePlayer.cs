@@ -30,7 +30,6 @@ public class OrangePlayer : MonoBehaviour
         groundDetection.Init(
             bodyData,
             maxDetectCount:      50,
-            downSlopeDetectDist: 0.001f,
             maxWalkAngle:        89,
             snapLength:          0.1f,
             innerGap:            0.1f
