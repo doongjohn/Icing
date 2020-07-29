@@ -1,5 +1,9 @@
-﻿// BPCC: Box Platformer Character Controller
-// (only supports box collider)
+﻿// --------------------------------------------------------
+// BPCC: Box Platformer Character Controller
+// --------------------------------------------------------
+// 1. Only supports box collider
+// 2. Ground detection will not work if a character is rotated.
+// 3. igh angle ground will not be detected if innerGap is too small.
 
 using System;
 using System.Collections.Generic;
@@ -77,6 +81,7 @@ namespace Icing
         }
 
         [SerializeField] private int maxDetectCount = 50;
+        [SerializeField] private float downSlopeDetectDist = 0.001f;
         [SerializeField] private float maxWalkAngle = 70f;
         [SerializeField] private float snapLength = 0.1f;
         [SerializeField] private float innerGap = 0.1f;
@@ -96,15 +101,26 @@ namespace Icing
         { get; private set; } = false;
         public bool OnSteepSlope => slideDownVector != Vector2.zero;
 
+        /// <summary>
+        /// Initialize Ground Detection
+        /// </summary>
+        /// <param name="bodyData">BodyData of the character.</param>
+        /// <param name="maxDetectCount">Capacity of the BoxCast hit result array.</param>
+        /// <param name="downSlopeDetectDist">Distance for detecting down slope. (Increase this if the chracter can't snap to some slopes.)</param>
+        /// <param name="maxWalkAngle">If a ground angle is bigger than maxWalkAngle, character will slide down.</param>
+        /// <param name="snapLength">If the character and ground are closer than or equal to snapLength, character will snap to the ground.</param>
+        /// <param name="innerGap">BoxCollider's size.y will shrink. (Increase this if the character can't climb a slope.)</param>
         public void Init(
             BPCC_BodyData bodyData,
             int maxDetectCount,
+            float downSlopeDetectDist,
             float maxWalkAngle,
             float snapLength,
             float innerGap)
         {
             this.bodyData = bodyData;
             this.maxDetectCount = Mathf.Max(maxDetectCount, 0);
+            this.downSlopeDetectDist = Mathf.Max(downSlopeDetectDist, float.Epsilon);
             this.maxWalkAngle = Mathf.Clamp(maxWalkAngle, 0, 89);
             this.snapLength = Mathf.Max(snapLength, 0);
             this.innerGap = Mathf.Max(innerGap, 0);
@@ -117,6 +133,7 @@ namespace Icing
 
         public void ApplyInnerGap()
         {
+            float innerGap = this.innerGap / tf.lossyScale.y;
             bodyData.collider.size = bodyData.colliderSize.Add(y: -innerGap);
             bodyData.collider.offset = new Vector2(0, innerGap * 0.5f);
         }
@@ -139,11 +156,9 @@ namespace Icing
         public void DetectGround(bool detectCondition, float slideAccel, float maxSlideSpeed, List<Collider2D> ignoreGrounds)
         {
             // FIXME
-            // 1. 60의 속도로 원 위를 지나가면 에어본 됨. (땅감지는 DownSlope)
-            // 2. 벽이 진행 방향의 위에 있으면 머리가 벽에 낌.
-            // 3. 벽이 진행 방향의 앞에 있으면 에어본 됨.
-            // 4. 최고 경사 보다 높은 경사의 위에 있을 때 경사를 내려갈 수 없음.
-            // 5. Y 크기를 동적으로 바꾸면 땅감지 이상하게 됨.
+            // 1. 벽이 진행 방향의 위에 있으면 머리가 벽에 낌.
+            // 2. 벽이 진행 방향의 앞에 있으면 에어본 됨.
+            // 3. 최고 경사 보다 높은 경사의 위에 있을 때 경사를 내려갈 수 없음.
 
             RaycastHit2D finalHitData = new RaycastHit2D();
             Vector2 halfSize = bodyData.Size * 0.5f;
@@ -194,9 +209,6 @@ namespace Icing
 
                     if (hitArray[i].point.y >= hitData.point.y || hitData.collider == null)
                         hitData = hitArray[i];
-
-                    //if (hitArray[i].distance < hitData.distance || hitData.collider == null)
-                    //    hitData = hitArray[i];
                 }
                 return hitData;
             }
@@ -216,14 +228,14 @@ namespace Icing
                     return;
 
                 finalHitData = hitData;
-                //Debug.Log("(Ground Detection) StraightDown");
+                Debug.Log("(Ground Detection) StraightDown");
             }
             void GetGround_DownSlope()
             {
                 float downDist = 
                     prevDistY != 0 
                     ? prevDistY
-                    : float.Epsilon;
+                    : downSlopeDetectDist /*float.Epsilon*/;
 
                 RaycastHit2D hitData = GetHighestGround(
                     new BoxCastData()
@@ -242,7 +254,7 @@ namespace Icing
                     return;
 
                 finalHitData = hitData;
-                //Debug.Log("(Ground Detection) DownSlope");
+                Debug.Log("(Ground Detection) DownSlope");
             }
             void GetGround_Cross()
             {
@@ -264,10 +276,19 @@ namespace Icing
                     return;
 
                 finalHitData = hitData;
-                //Debug.Log("(Ground Detection) Cross\n" + hitData.collider.name);
+                Debug.Log("(Ground Detection) Cross\n" + hitData.collider.name);
             }
             void CheckValley()
             {
+                // 캐릭터의 양 끝에 경사가 있을 때
+                // 평평한 땅 위에 있는 것과 같은 걸로 처리하기 위함.
+
+                if (finalHitData.collider == null)
+                    return;
+
+                if (finalHitData.normal.x == 0)
+                    return;
+
                 var hitR = Physics2D.Raycast(pos.Add(x: halfSize.x), Vector2.down, halfSize.y, groundLayer);
                 var hitL = Physics2D.Raycast(pos.Add(x: -halfSize.x), Vector2.down, halfSize.y, groundLayer);
                 inValley = hitR.collider != null && hitL.collider != null;
@@ -275,7 +296,6 @@ namespace Icing
 
             #region Detect Ground
 
-            CheckValley();
             if (vel.x != 0)
             {
                 if (OnGround && groundData.normal.Value.x * moveDirX < 0)
@@ -292,9 +312,11 @@ namespace Icing
             if (finalHitData.collider == null)
                 GetGround_StraightDown();
 
-            #endregion
+            CheckValley();
 
             #endregion
+
+        #endregion
 
             #region Set Ground Data
 
