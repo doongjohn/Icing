@@ -4,8 +4,8 @@ Some useful scripts for Unity game development
 ## Scripts
 - 2D Platformer Character Controller (Rigidbody based) **60%**
 - UI Components **0%**
+- State Machine **40%**
 - Helpers
-  - State Machine **40%**
   - Object pooling **0%**
   - Timer **100%**
   - Etc...
