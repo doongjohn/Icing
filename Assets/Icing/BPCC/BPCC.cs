@@ -1,9 +1,10 @@
 ﻿// --------------------------------------------------------
 // BPCC: Box Platformer Character Controller
 // --------------------------------------------------------
-// 1. Only supports box collider
+// 1. It uses Rigidbody2D.
+// 1. Only supports box collider based character.
 // 2. Ground detection will not work if a character is rotated.
-// 3. igh angle ground will not be detected if innerGap is too small.
+// 3. High angle ground will not be detected if innerGap is too small.
 
 using System;
 using System.Collections.Generic;
