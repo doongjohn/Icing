@@ -34,7 +34,10 @@ public class OrangePlayer : MonoBehaviour
             snapLength:          0.1f,
             innerGap:            0.1f
         );
-        walk.Init(walkSpeed: 15);
+        walk.Init(
+            bodyData,
+            walkSpeed: 15
+        );
         jump.Init(bodyData);
 
         StartCoroutine(LateFixedUpdate());

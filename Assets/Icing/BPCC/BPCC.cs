@@ -1,13 +1,15 @@
 ﻿// --------------------------------------------------------
 // BPCC: Box Platformer Character Controller
 // --------------------------------------------------------
-// 1. It uses Rigidbody2D.
-// 1. Only supports box collider based character.
-// 2. Ground detection will not work if a character is rotated.
-// 3. High angle ground will not be detected if innerGap is too small.
+// #1. It uses Rigidbody2D.
+// #2. Only supports BoxCollider2D for a character collider.
+// #3. This Ground detection will not work if a character is rotated.
+// #4. This ground detection doesn't work well on a high angle slope if the innerGap is too small.
+// #5. This ground detection is not meant to handle "wall climbing". (See #4)
 
 using System;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 namespace Icing
@@ -42,10 +44,10 @@ namespace Icing
 
         public void Init(BPCC_BodyData bodyData, float gravityAccel, float maxFallSpeed, bool useGravity = true)
         {
-            UseGravity.Set(useGravity);
             this.bodyData = bodyData;
             this.gravityAccel = gravityAccel;
             this.maxFallSpeed = maxFallSpeed;
+            UseGravity.Set(useGravity);
         }
 
         public void CalcGravity()
@@ -109,7 +111,7 @@ namespace Icing
         /// <param name="maxDetectCount">Capacity of the BoxCast hit result array.</param>
         /// <param name="maxWalkAngle">If a ground angle is bigger than maxWalkAngle, character will slide down.</param>
         /// <param name="snapLength">If the character and ground are closer than or equal to snapLength, character will snap to the ground.</param>
-        /// <param name="innerGap">BoxCollider's size.y will shrink. (Increase this if the character can't climb a slope.)</param>
+        /// <param name="innerGap">BoxCollider's size.y will shrink. (Increase this if the character acts weird on slope.)</param>
         public void Init(
             BPCC_BodyData bodyData,
             int maxDetectCount,
@@ -155,8 +157,7 @@ namespace Icing
         public void DetectGround(bool detectCondition, float slideAccel, float maxSlideSpeed, List<Collider2D> ignoreGrounds)
         {
             // FIXME
-            // 1. 벽이 진행 방향의 위에 있으면 머리가 벽에 낌.
-            // 2. 벽이 진행 방향의 앞에 벽에 낌.
+            // 1. 벽이 진행 방향의 위에 있으면 innerGap 만큼 천장을 무시함.
 
             if (!detectCondition)
             {
@@ -182,9 +183,9 @@ namespace Icing
 
             #region Next Frame Data
 
-            RaycastHit2D nextHit = Physics2D.BoxCast(pos, size, 0f, velDir, vel.magnitude * Time.deltaTime, groundLayer);
-            Vector2 nextVector = nextHit.collider == null ? vel * Time.deltaTime : velDir * nextHit.distance;
-            float nextDistY = Mathf.Abs(nextVector.y);
+            //RaycastHit2D nextHit = Physics2D.BoxCast(pos, size, 0f, velDir, vel.magnitude * Time.deltaTime, groundLayer);
+            //Vector2 nextVector = nextHit.collider == null ? vel * Time.deltaTime : velDir * nextHit.distance;
+            //float nextDistY = Mathf.Abs(nextVector.y);
 
             #endregion
 
@@ -225,7 +226,7 @@ namespace Icing
                         pos = pos.Add(y: size.y),
                         size = size,
                         dir = Vector2.down,
-                        dist = size.y + snapLength + Mathf.Max(nextDistY, prevDistY)
+                        dist = size.y + snapLength + prevDistY /*Mathf.Max(nextDistY, prevDistY)*/
                     },
                     (hit) => hit.point.y > pos.y - halfSize.y + innerGap);
 
@@ -239,13 +240,15 @@ namespace Icing
             {
                 Debug.Log("(GroundDetection) Try DownSlope");
 
+                float downDist = Mathf.Max(vel.y * Time.deltaTime, contactOffset * 2);
+
                 RaycastHit2D hitData = GetHighestGround(
                     new BoxCastData()
                     {
-                        pos = pos.Add(y: -contactOffset),
-                        size = size.Add(y: contactOffset * 2),
+                        pos = pos.Add(y: -downDist * 0.5f),
+                        size = size.Add(y: downDist),
                         dir = Vector2.left * prevVector.x,
-                        dist = prevDistX
+                        dist = prevDistX + contactOffset
                     });
 
                 if (hitData.collider == null)
@@ -254,6 +257,24 @@ namespace Icing
                 // 낮은 경사의 오차를 해결하기 위함.
                 if (hitData.normal.x == 0)
                     hitData.normal = hitData.normal.Change(x: Mathf.Sign(prevVector.x) * float.Epsilon);
+
+                // 땅을 뚫고 들어가는 것을 방지하기 위한 박스캐스트.
+                RaycastHit2D downHitData = GetHighestGround(
+                    new BoxCastData()
+                    {
+                        pos = pos.Change(x: hitData.point.x + (halfSize.x * Mathf.Sign(hitData.normal.x))),
+                        size = size,
+                        dir = Vector2.down,
+                        dist = size.y + snapLength + prevDistY
+                    });
+
+                if (downHitData.collider != null)
+                {
+                    finalHitData = downHitData;
+                    Debug.Log("(GroundDetection) DownSlope\n" + downHitData.normal.x);
+                    Debug.DrawRay(downHitData.point, downHitData.normal, Color.red);
+                    return;
+                }
 
                 finalHitData = hitData;
                 Debug.Log("(GroundDetection) DownSlope\n" + hitData.normal.x);
@@ -351,15 +372,15 @@ namespace Icing
 
                 // Snap Y
                 snapPos.y = groundData.hitPoint.Value.y + halfSize.y;
-                
+
                 // Snap X
                 if (groundData.normal.Value.x != 0 && prevDirX != 0)
                 {
-                    snapPos.x = groundData.hitPoint.Value.x + ((OnSteepSlope ? halfSize.x + contactOffset : halfSize.x) * Mathf.Sign(groundData.normal.Value.x));
+                    snapPos.x = groundData.hitPoint.Value.x + ((halfSize.x + contactOffset) * Mathf.Sign(groundData.normal.Value.x));
                     Debug.DrawRay(groundData.hitPoint.Value, groundData.normal.Value * 2f, Color.cyan);
                 }
 
-                // Snap
+                // Apply Snap
                 tf.position = snapPos;
 
                 #endregion
@@ -379,6 +400,7 @@ namespace Icing
         [SerializeField] private float walkSpeed;
 
         private int inputDir = 0;
+        private BPCC_BodyData bodyData;
 
         public BoolCount CanWalk = new BoolCount();
 
@@ -390,10 +412,11 @@ namespace Icing
         public Vector2 WalkVector
         { get; private set; } = Vector2.zero;
 
-        public void Init(float walkSpeed, bool canWalk = true)
+        public void Init(BPCC_BodyData bodyData, float walkSpeed, bool canWalk = true)
         {
-            CanWalk.Set(canWalk);
+            this.bodyData = bodyData;
             this.walkSpeed = walkSpeed;
+            CanWalk.Set(canWalk);
         }
 
         public void GetInput(KeyCode plusKey, KeyCode minusKey)
@@ -464,8 +487,8 @@ namespace Icing
 
         public void Init(BPCC_BodyData bodyData, bool canJump = true)
         {
-            CanJump.Set(canJump);
             this.bodyData = bodyData;
+            CanJump.Set(canJump);
         }
 
         public void GetInput(KeyCode key)

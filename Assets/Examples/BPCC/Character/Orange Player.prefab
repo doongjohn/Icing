@@ -180,7 +180,6 @@ MonoBehaviour:
     value: 0
   groundDetection:
     maxDetectCount: 50
-    downSlopeDetectDist: 0.001
     maxWalkAngle: 89
     snapLength: 0.1
     innerGap: 0.1
@@ -190,6 +189,9 @@ MonoBehaviour:
     slideDownVector: {x: 0, y: 0}
   walk:
     walkSpeed: 0
+    wallAndGroundLayer:
+      serializedVersion: 2
+      m_Bits: 256
   jump:
     jumpCurve:
       curve:
