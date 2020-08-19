@@ -182,14 +182,6 @@ namespace Icing
 
             #endregion
 
-            #region Next Frame Data
-
-            //RaycastHit2D nextHit = Physics2D.BoxCast(pos, size, 0f, velDir, vel.magnitude * Time.deltaTime, groundLayer);
-            //Vector2 nextVector = nextHit.collider == null ? vel * Time.deltaTime : velDir * nextHit.distance;
-            //float nextDistY = Mathf.Abs(nextVector.y);
-
-            #endregion
-
             #region Previous Frame Data
 
             Vector2 prevVector = pos - prevPos;
