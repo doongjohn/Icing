@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.XR;
 
 namespace Icing
 {
@@ -192,9 +193,9 @@ namespace Icing
             #region Previous Frame Data
 
             Vector2 prevVector = pos - prevPos;
-            int prevDirX = prevVector.x.Sign0();
             float prevDistY = Mathf.Abs(prevVector.y);
             float prevDistX = Mathf.Abs(prevVector.x);
+            int prevDirX = prevVector.x.Sign0();
 
             #endregion
 
@@ -226,7 +227,7 @@ namespace Icing
                         pos = pos.Add(y: size.y),
                         size = size,
                         dir = Vector2.down,
-                        dist = size.y + snapLength + prevDistY /*Mathf.Max(nextDistY, prevDistY)*/
+                        dist = size.y + snapLength + prevDistY
                     },
                     (hit) => hit.point.y > pos.y - halfSize.y + innerGap);
 
@@ -238,9 +239,11 @@ namespace Icing
             }
             void GetGround_DownSlope()
             {
-                Debug.Log("(GroundDetection) Try DownSlope");
+                // NOTE:
+                // 많은 발전이 이루어질 수 있는 부분이다.
+                // 지금으로서는 그냥 쓸만하다.
 
-                float downDist = Mathf.Max(vel.y * Time.deltaTime, contactOffset * 2);
+                float downDist = Mathf.Max(vel.y * Time.deltaTime, contactOffset);
 
                 RaycastHit2D hitData = GetHighestGround(
                     new BoxCastData()
@@ -257,24 +260,6 @@ namespace Icing
                 // 낮은 경사의 오차를 해결하기 위함.
                 if (hitData.normal.x == 0)
                     hitData.normal = hitData.normal.Change(x: Mathf.Sign(prevVector.x) * float.Epsilon);
-
-                // 땅을 뚫고 들어가는 것을 방지하기 위한 박스캐스트.
-                RaycastHit2D downHitData = GetHighestGround(
-                    new BoxCastData()
-                    {
-                        pos = pos.Change(x: hitData.point.x + (halfSize.x * Mathf.Sign(hitData.normal.x))),
-                        size = size,
-                        dir = Vector2.down,
-                        dist = size.y + snapLength + prevDistY
-                    });
-
-                if (downHitData.collider != null)
-                {
-                    finalHitData = downHitData;
-                    Debug.Log("(GroundDetection) DownSlope\n" + downHitData.normal.x);
-                    Debug.DrawRay(downHitData.point, downHitData.normal, Color.red);
-                    return;
-                }
 
                 finalHitData = hitData;
                 Debug.Log("(GroundDetection) DownSlope\n" + hitData.normal.x);
