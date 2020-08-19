@@ -3,6 +3,8 @@ using UnityEngine;
 
 namespace Icing
 {
+    // TODO:
+    // 더 나은 이름으로 바꾸기.
     public class BoolCount
     {
         private int count = 0;
