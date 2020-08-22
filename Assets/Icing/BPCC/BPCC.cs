@@ -3,15 +3,14 @@
 // --------------------------------------------------------
 // #1. It uses Rigidbody2D.
 // #2. Only supports BoxCollider2D for a character collider.
-// #3. This Ground detection will not work if a character is rotated.
-// #4. This ground detection doesn't work well on a high angle slope if the innerGap is too small.
-// #5. This ground detection is not meant to handle "wall climbing". (See #4)
+// #3. Ground detection will not work if a character is rotated.
+// #4. Ground detection doesn't work well on a high angle slope
+//     if the innerGap is too small.
+// #5. Ground detection is not meant to handle "wall climbing". (See #4)
 
 using System;
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
-using UnityEngine.XR;
 
 namespace Icing
 {
@@ -20,16 +19,22 @@ namespace Icing
         public Transform transform;
         public Rigidbody2D rb2D;
         public BoxCollider2D collider;
+        public BoxCollider2D oneWayCollider;
         public Vector2 colliderSize;
 
-        // Wrold space size
+        // World Space size
         public Vector2 Size => transform.lossyScale * colliderSize;
 
-        public void Init(Transform transform, Rigidbody2D rb2D, BoxCollider2D collider)
+        public void Init(
+            Transform transform,
+            Rigidbody2D rb2D,
+            BoxCollider2D collider,
+            BoxCollider2D oneWayCollider)
         {
             this.transform = transform;
             this.rb2D = rb2D;
             this.collider = collider;
+            this.oneWayCollider = oneWayCollider;
             this.colliderSize = collider.size;
         }
     }
@@ -43,7 +48,11 @@ namespace Icing
         public BPCC_BodyData bodyData;
         public BoolCount UseGravity = new BoolCount();
 
-        public void Init(BPCC_BodyData bodyData, float gravityAccel, float maxFallSpeed, bool useGravity = true)
+        public void Init(
+            BPCC_BodyData bodyData,
+            float gravityAccel,
+            float maxFallSpeed,
+            bool useGravity = true)
         {
             this.bodyData = bodyData;
             this.gravityAccel = gravityAccel;
@@ -89,12 +98,16 @@ namespace Icing
         [SerializeField] private float snapLength = 0.1f;
         [SerializeField] private float innerGap = 0.1f;
         [SerializeField] private BPCC_BodyData bodyData;
-        [SerializeField] private LayerMask groundLayer;
+        [SerializeField] private LayerMask solidLayer;
+        [SerializeField] private LayerMask oneWayLayer;
 
-        private RaycastHit2D[] hitArray;
-        private BPCC_GroundData groundData;
         private Transform tf;
+        private LayerMask groundLayer;
+        private RaycastHit2D[] hitArray;
+        private List<Collider2D> ignoreGrounds = new List<Collider2D>();
+        private BPCC_GroundData groundData;
         private Vector2 prevPos;
+        private bool inputFallThrough = false;
 
         public Vector2 slideDownVector;
 
@@ -126,22 +139,33 @@ namespace Icing
             this.snapLength = Mathf.Max(snapLength, 0);
             this.innerGap = Mathf.Max(innerGap, 0);
 
-            hitArray = new RaycastHit2D[maxDetectCount];
             tf = bodyData.transform;
-
+            groundLayer = LayerMaskHelper.Create(solidLayer, oneWayLayer);
+            hitArray = new RaycastHit2D[maxDetectCount];
             prevPos = tf.position;
         }
 
         public void ApplyInnerGap()
         {
             float innerGap = this.innerGap / tf.lossyScale.y;
+
+            // Solid Collider
             bodyData.collider.size = bodyData.colliderSize.Add(y: -innerGap);
             bodyData.collider.offset = new Vector2(0, innerGap * 0.5f);
+
+            // One Way Collider
+            bodyData.oneWayCollider.size = bodyData.collider.size;
+            bodyData.oneWayCollider.offset = bodyData.collider.offset;
         }
         public void ResetInnerGap()
         {
+            // Solid Collider
             bodyData.collider.size = bodyData.colliderSize;
             bodyData.collider.offset = Vector2.zero;
+
+            // One Way Collider
+            bodyData.oneWayCollider.size = bodyData.collider.size;
+            bodyData.oneWayCollider.offset = bodyData.collider.offset;
         }
 
         public void ResetData()
@@ -155,10 +179,18 @@ namespace Icing
 
             ResetInnerGap();
         }
-        public void DetectGround(bool detectCondition, float slideAccel, float maxSlideSpeed, List<Collider2D> ignoreGrounds)
+        public void DetectGround(bool detectCondition, float slideAccel, float maxSlideSpeed)
         {
-            // FIXME
+            // NOTE:
+            // 1. 속도가 너무 빠르면 이상한 결과가 나올 수 있다.
+
+            // FIXME:
             // 1. 벽이 진행 방향의 위에 있으면 innerGap 만큼 천장을 무시함.
+            //    (흠... 어떻게 고치지...)
+
+            // TODO:
+            // 1. 단방향 플랫폼이 몸에 겹쳐져 있을 경우 무시함. (이전 코드 참조.)
+            // 2. 단방향 플랫폼 아래로 떨어지는 기능 추가.
 
             if (!detectCondition)
             {
@@ -196,11 +228,20 @@ namespace Icing
             RaycastHit2D GetHighestGround(BoxCastData castData, Func<RaycastHit2D, bool> skipCondition = null)
             {
                 RaycastHit2D hitData = finalHitData;
-                for (int i = 0; i < Physics2D.BoxCastNonAlloc(castData.pos, castData.size, 0f, castData.dir, hitArray, castData.dist, groundLayer); i++)
+                int hitCount = Physics2D.BoxCastNonAlloc(castData.pos, castData.size, 0f, castData.dir, hitArray, castData.dist, groundLayer);
+                for (int i = 0; i < hitCount; i++)
                 {
                     if (ignoreGrounds.Contains(hitArray[i].collider)
                     ||  hitArray[i].normal.y <= 0
                     ||  (skipCondition?.Invoke(hitArray[i]) ?? false))
+                        continue;
+
+                    // Note:
+                    // 이 체크는 단방향 플랫폼에 대해 어떻게 처리 할지에 따라 다르게 설정 되어야 함.
+                    if (oneWayLayer.ContainsLayer(hitArray[i].collider.gameObject.layer)
+                    && !OnGround
+                    && vel.y <= 0
+                    && hitArray[i].point.y > pos.y - halfSize.y)
                         continue;
 
                     if (hitArray[i].point.y >= hitData.point.y
@@ -211,8 +252,6 @@ namespace Icing
             }
             void GetGround_StraightDown()
             {
-                Debug.Log("(GroundDetection) Try StraightDown");
-
                 RaycastHit2D hitData = GetHighestGround(
                     new BoxCastData()
                     {
@@ -227,13 +266,11 @@ namespace Icing
                     return;
 
                 finalHitData = hitData;
-                Debug.Log("(GroundDetection) StraightDown");
             }
             void GetGround_DownSlope()
             {
                 // NOTE:
-                // 많은 발전이 이루어질 수 있는 부분이다.
-                // 지금으로서는 그냥 쓸만하다.
+                // 많은 발전이 이루어질 수 있는 부분이다.    
 
                 float downDist = Mathf.Max(vel.y * Time.deltaTime, contactOffset);
 
@@ -254,13 +291,9 @@ namespace Icing
                     hitData.normal = hitData.normal.Change(x: Mathf.Sign(prevVector.x) * float.Epsilon);
 
                 finalHitData = hitData;
-                Debug.Log("(GroundDetection) DownSlope\n" + hitData.normal.x);
-                Debug.DrawRay(hitData.point, hitData.normal, Color.red);
             }
             void GetGround_Cross()
             {
-                Debug.Log("(GroundDetection) Try Cross");
-
                 RaycastHit2D hitData = GetHighestGround(
                     new BoxCastData()
                     {
@@ -274,7 +307,6 @@ namespace Icing
                     return;
 
                 finalHitData = hitData;
-                Debug.Log("(GroundDetection) Cross\n" + hitData.collider.name);
             }
             void CheckValley()
             {
@@ -313,7 +345,6 @@ namespace Icing
             if (finalHitData.collider == null)
             {
                 ResetData();
-                Debug.LogWarning("(Ground Detection) Airborne!!!");
             }
             else
             {
@@ -323,7 +354,7 @@ namespace Icing
                 groundData.normal = inValley ? Vector2.up : finalHitData.normal;
                 groundData.hitPoint = finalHitData.point;
 
-                #region Slide Down
+                #region Calc Slide Down Vector
 
                 OnSteepSlope = false;
                 slideDownVector = Vector2.zero;
@@ -354,7 +385,6 @@ namespace Icing
                 if (groundData.normal.Value.x != 0 && prevDirX != 0)
                 {
                     snapPos.x = groundData.hitPoint.Value.x + ((halfSize.x + contactOffset) * Mathf.Sign(groundData.normal.Value.x));
-                    Debug.DrawRay(groundData.hitPoint.Value, groundData.normal.Value * 2f, Color.cyan);
                 }
 
                 // Apply Snap
@@ -368,6 +398,78 @@ namespace Icing
         END:
             // Update Previous Position
             prevPos = tf.position;
+        }
+        
+        public void GetInput_FallThrough(KeyCode keyCode)
+        {
+            if (Input.GetKeyDown(keyCode))
+                inputFallThrough = true;
+        }
+        public void FallThrough()
+        {
+            // NOTE:
+            // 1. 경사를 내려가고 있을 때는 내려가면서 플랫폼이 다시
+            //    인식되어서 플랫폼을 뚫고 내려가지지 않음.
+
+            #region Overlap Box
+
+            Vector2 detectPos = tf.position;
+            Vector2 detectSize = bodyData.Size;
+
+            Collider2D[] overlaps =
+                Physics2D.OverlapBoxAll(
+                    detectPos,
+                    detectSize,
+                    0f,
+                    oneWayLayer
+                );
+
+            #endregion
+
+            #region Enable Collsion
+
+            if (overlaps != null && ignoreGrounds.Count != 0)
+            {
+                for (int i = ignoreGrounds.Count - 1; i >= 0; i--)
+                {
+                    if (Array.Exists(overlaps, col => col == ignoreGrounds[i])) continue;
+
+                    Physics2D.IgnoreCollision(bodyData.oneWayCollider, ignoreGrounds[i], false);
+                    ignoreGrounds.Remove(ignoreGrounds[i]);
+                }
+            }
+            else
+            {
+                if (overlaps != null)
+                {
+                    for (int i = 0; i < ignoreGrounds.Count; i++)
+                        Physics2D.IgnoreCollision(bodyData.oneWayCollider, ignoreGrounds[i], false);
+                }
+                ignoreGrounds.Clear();
+            }
+
+            #endregion
+
+            #region Disable Collision (Fall Through)
+
+            if (!inputFallThrough)
+                return;
+
+            inputFallThrough = false;
+
+            if (overlaps == null || !OnGround)
+                return;
+
+            for (int i = 0; i < overlaps.Length; i++)
+            {
+                if (ignoreGrounds.Contains(overlaps[i]))
+                    continue;
+
+                Physics2D.IgnoreCollision(bodyData.oneWayCollider, overlaps[i], true);
+                ignoreGrounds.Add(overlaps[i]);
+            }
+
+            #endregion
         }
     }
 
@@ -456,16 +558,20 @@ namespace Icing
         private float? jumpVelocity = null;
 
         public BoolCount CanJump = new BoolCount();
+        public int airJumpCount;
+        public int curAirJumpCount;
 
         public bool IsJumping
         { get; private set; } = false;
         public bool InputPressed => inputPressed;
         public float? JumpVelocity => jumpVelocity;
+        public bool CanAirJump => curAirJumpCount < airJumpCount;
 
-        public void Init(BPCC_BodyData bodyData, bool canJump = true)
+        public void Init(BPCC_BodyData bodyData, bool canJump = true, int airJumpCount = 1)
         {
             this.bodyData = bodyData;
             CanJump.Set(canJump);
+            this.airJumpCount = airJumpCount;
         }
 
         public void GetInput(KeyCode key)
@@ -484,17 +590,27 @@ namespace Icing
             inputPressed = false;
         }
 
-        public void StartJump()
-        {
-            IsJumping = true;
-            startPosY = bodyData.transform.position.y;
-        }
         public void EndJump()
         {
             IsJumping = false;
             jumpCurve.curTime = 0;
             startPosY = null;
             jumpVelocity = null;
+        }
+        public void StartJump()
+        {
+            EndJump();
+            IsJumping = true;
+            startPosY = bodyData.transform.position.y;
+        }
+        public void StartAirJump()
+        {
+            StartJump();
+            curAirJumpCount++;
+        }
+        public void ResetAirJumpCount()
+        {
+            curAirJumpCount = 0;
         }
         public void CalcJumpVelocity()
         {

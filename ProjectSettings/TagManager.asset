@@ -14,6 +14,7 @@ TagManager:
   - 
   - 
   - Ground
+  - One Way Ground
   - 
   - 
   - 
@@ -35,8 +36,7 @@ TagManager:
   - 
   - 
   - 
-  - 
-  - 
+  - Character
   m_SortingLayers:
   - name: BG
     uniqueID: 3506327271

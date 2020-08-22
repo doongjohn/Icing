@@ -5,7 +5,8 @@ using UnityEngine;
 
 public class OrangePlayer : MonoBehaviour
 {
-    [SerializeField] private BPCC_BodyData bodyData = new BPCC_BodyData();
+    // Character Data
+    private BPCC_BodyData bodyData = new BPCC_BodyData();
     [SerializeField] private BPCC_Gravity gravity = new BPCC_Gravity();
     [SerializeField] private BPCC_GroundDetection groundDetection = new BPCC_GroundDetection();
     [SerializeField] private BPCC_Walk walk = new BPCC_Walk();
@@ -18,9 +19,10 @@ public class OrangePlayer : MonoBehaviour
     private void Awake()
     {
         bodyData.Init(
-            transform: transform,
-            rb2D:      GetComponent<Rigidbody2D>(),
-            collider:  GetComponent<BoxCollider2D>()
+            transform:      transform,
+            rb2D:           GetComponent<Rigidbody2D>(),
+            collider:       GetComponent<BoxCollider2D>(),
+            oneWayCollider: transform.GetChild(0).GetComponent<BoxCollider2D>()
         );
         gravity.Init(
             bodyData,
@@ -29,21 +31,25 @@ public class OrangePlayer : MonoBehaviour
         );
         groundDetection.Init(
             bodyData,
-            maxDetectCount:      50,
-            maxWalkAngle:        89,
-            snapLength:          0.1f,
-            innerGap:            0.1f
+            maxDetectCount: 50,
+            maxWalkAngle:   89,
+            snapLength:     0.1f,
+            innerGap:       0.1f
         );
         walk.Init(
             bodyData,
             walkSpeed: 15
         );
-        jump.Init(bodyData);
+        jump.Init(
+            bodyData,
+            airJumpCount: 1
+        );
 
         StartCoroutine(LateFixedUpdate());
     }
     private void Update()
     {
+        groundDetection.GetInput_FallThrough(KeyCode.S);
         walk.GetInput(KeyCode.D, KeyCode.A);
         jump.GetInput(KeyCode.Space);
     }
@@ -53,19 +59,33 @@ public class OrangePlayer : MonoBehaviour
         controlVector = Vector2.zero;
         externalVector = Vector2.zero;
 
-        if (!jump.IsJumping)
+        // On Ground
+        if (groundDetection.OnGround)
         {
-            // Apply Gravity
-            if (!groundDetection.OnGround)
-            {
-                gravity.CalcGravity();
-                controlVector.y = gravity.value;
-            }
-            // Check Jump Input
-            else if (jump.InputPressed)
+            // Ground Jump
+            if (jump.InputPressed)
             {
                 jump.StartJump();
                 groundDetection.ResetData();
+            }
+
+            // Reset Air Jump Count
+            jump.ResetAirJumpCount();
+        }
+        // Not On Ground
+        else
+        {
+            // Air Jump
+            if (jump.InputPressed && jump.CanAirJump)
+            {
+                jump.StartAirJump();
+                groundDetection.ResetData();
+            }
+            // Apply Gravity
+            else
+            {
+                gravity.CalcGravity();
+                controlVector.y = gravity.value;
             }
         }
 
@@ -103,12 +123,18 @@ public class OrangePlayer : MonoBehaviour
         {
             yield return new WaitForFixedUpdate();
 
+            // Fall Through One Way Platform
+            groundDetection.FallThrough();
+
+            // Note:
+            // In order to snap to the ground correctly
+            // DetectGround method needs to run after internal physics update.
+
             // Detect Ground
             groundDetection.DetectGround(
                 detectCondition: !jump.IsJumping,
                 slideAccel:      gravity.gravityAccel,
-                maxSlideSpeed:   gravity.maxFallSpeed,
-                ignoreGrounds:   new List<Collider2D>());
+                maxSlideSpeed:   gravity.maxFallSpeed);
         }
     }
 }

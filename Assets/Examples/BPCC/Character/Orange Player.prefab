@@ -1,5 +1,82 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &485969058
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 485969059}
+  - component: {fileID: 485969061}
+  - component: {fileID: 485969060}
+  m_Layer: 0
+  m_Name: One Way Collider
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &485969059
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 485969058}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 2769284671554007253}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!61 &485969061
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 485969058}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_UsedByEffector: 1
+  m_UsedByComposite: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  serializedVersion: 2
+  m_Size: {x: 1, y: 1.7}
+  m_EdgeRadius: 0
+--- !u!251 &485969060
+PlatformEffector2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 485969058}
+  m_Enabled: 1
+  m_UseColliderMask: 1
+  m_ColliderMask:
+    serializedVersion: 2
+    m_Bits: 512
+  m_RotationalOffset: 180
+  m_UseOneWay: 1
+  m_UseOneWayGrouping: 0
+  m_SurfaceArc: 179
+  m_UseSideFriction: 0
+  m_UseSideBounce: 0
+  m_SideArc: 1
 --- !u!1 &2769284671517726206
 GameObject:
   m_ObjectHideFlags: 0
@@ -29,7 +106,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1.7, z: 1}
   m_Children: []
   m_Father: {fileID: 2769284671554007253}
-  m_RootOrder: 0
+  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &2769284671517726200
 SpriteRenderer:
@@ -93,7 +170,7 @@ GameObject:
   - component: {fileID: 2769284671554007252}
   - component: {fileID: 2769284671554007255}
   - component: {fileID: 2769284671554007254}
-  m_Layer: 0
+  m_Layer: 31
   m_Name: Orange Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -108,9 +185,10 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2769284671554007242}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -18.4, y: -6.8, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
+  - {fileID: 485969059}
   - {fileID: 2769284671517726201}
   m_Father: {fileID: 0}
   m_RootOrder: 0
@@ -183,15 +261,15 @@ MonoBehaviour:
     maxWalkAngle: 89
     snapLength: 0.1
     innerGap: 0.1
-    groundLayer:
+    solidLayer:
       serializedVersion: 2
       m_Bits: 256
+    oneWayLayer:
+      serializedVersion: 2
+      m_Bits: 512
     slideDownVector: {x: 0, y: 0}
   walk:
     walkSpeed: 0
-    wallAndGroundLayer:
-      serializedVersion: 2
-      m_Bits: 256
   jump:
     jumpCurve:
       curve:
@@ -207,15 +285,26 @@ MonoBehaviour:
           inWeight: 0
           outWeight: 0
         - serializedVersion: 3
-          time: 0.4
-          value: 10
-          inSlope: 0
-          outSlope: 0
+          time: 0.20382322
+          value: 4.6563888
+          inSlope: 13.356579
+          outSlope: 13.356579
           tangentMode: 0
           weightedMode: 0
-          inWeight: 0
+          inWeight: 0.33333334
+          outWeight: 0.5765351
+        - serializedVersion: 3
+          time: 0.25
+          value: 5
+          inSlope: 1.5260866
+          outSlope: 1.5260866
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0.5698924
           outWeight: 0
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
       curTime: 0
+    airJumpCount: 0
+    curAirJumpCount: 0
