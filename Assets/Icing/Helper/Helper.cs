@@ -20,7 +20,7 @@ namespace Icing
         {
             try
             {
-                string testPath = path + ".~yuchan~tmp";
+                string testPath = path + ".~~icing~~tmp";
                 File.Create(testPath).Dispose();
                 File.Delete(testPath);
                 return true;
@@ -156,18 +156,29 @@ namespace Icing
 
         public static Vector2 Sign(this Vector2 vec)
         {
-            Vector2 result;
-            result.x = Mathf.Sign(vec.x);
-            result.y = Mathf.Sign(vec.y);
-            return result;
+            vec.x = Mathf.Sign(vec.x);
+            vec.y = Mathf.Sign(vec.y);
+            return vec;
         }
         public static Vector3 Sign(this Vector3 vec)
         {
-            Vector3 result;
-            result.x = Mathf.Sign(vec.x);
-            result.y = Mathf.Sign(vec.y);
-            result.z = Mathf.Sign(vec.z);
-            return result;
+            vec.x = Mathf.Sign(vec.x);
+            vec.y = Mathf.Sign(vec.y);
+            vec.z = Mathf.Sign(vec.z);
+            return vec;
+        }
+        public static Vector2 Sign0(this Vector2 vec)
+        {
+            vec.x = vec.x.Sign0();
+            vec.y = vec.y.Sign0();
+            return vec;
+        }
+        public static Vector3 Sign0(this Vector3 vec)
+        {
+            vec.x = vec.x.Sign0();
+            vec.y = vec.y.Sign0();
+            vec.z = vec.z.Sign0();
+            return vec;
         }
 
         public static Vector2 Abs(this Vector2 vec)
@@ -198,37 +209,46 @@ namespace Icing
         {
             return NamesToMask(layerNames);
         }
-        public static LayerMask Create(params int[] layerNumbers)
+        public static LayerMask Create(params LayerMask[] layerNumbers)
         {
             return LayerNumbersToMask(layerNumbers);
         }
 
         public static LayerMask NamesToMask(params string[] layerNames)
         {
-            LayerMask ret = (LayerMask)0;
+            LayerMask result = 0;
             foreach (var name in layerNames)
             {
-                ret |= (1 << LayerMask.NameToLayer(name));
+                result |= LayerMask.NameToLayer(name);
             }
-            return ret;
+            return result;
         }
-        public static LayerMask LayerNumbersToMask(params int[] layerNumbers)
+        public static LayerMask LayerNumbersToMask(params LayerMask[] layerNumbers)
         {
-            LayerMask ret = (LayerMask)0;
+            LayerMask result = 0;
             foreach (var layer in layerNumbers)
             {
-                ret |= (1 << layer);
+                result |= layer;
             }
-            return ret;
+            return result;
         }
 
         public static LayerMask Inverse(this LayerMask original)
         {
             return ~original;
         }
+        public static LayerMask AddMask(this LayerMask original, params LayerMask[] layerNumbers)
+        {
+            return original | LayerNumbersToMask(layerNumbers);
+        }
         public static LayerMask AddMask(this LayerMask original, params string[] layerNames)
         {
             return original | NamesToMask(layerNames);
+        }
+        public static LayerMask RemoveMask(this LayerMask original, params LayerMask[] layerNumbers)
+        {
+            LayerMask invertedOriginal = ~original;
+            return ~(invertedOriginal | LayerNumbersToMask(layerNumbers));
         }
         public static LayerMask RemoveMask(this LayerMask original, params string[] layerNames)
         {
@@ -263,7 +283,7 @@ namespace Icing
             return string.Join(delimiter, MaskToNames(original));
         }
 
-        public static bool ContainsLayer(this LayerMask layermMask, int layer)
+        public static bool ContainsLayer(this LayerMask layermMask, LayerMask layer)
         {
             return layermMask == (layermMask | (1 << layer));
         }
