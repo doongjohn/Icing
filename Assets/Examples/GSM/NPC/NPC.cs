@@ -1,6 +1,4 @@
 ﻿using Icing;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class NPC : GSM_Controller
@@ -46,6 +44,7 @@ public class NPC : GSM_Controller
             isDone: () => targetDist <= 0.5f
         );
 
+
         // Init Flow
         var flow_normal = new Flow();
         var flow_angry = new Flow();
@@ -63,6 +62,7 @@ public class NPC : GSM_Controller
         flow_angry
             .Do(() => true, bvr_attack.Wait()
                 .To(() => true, flow_normal));
+
 
         // Init GSM
         GSM_Init(
