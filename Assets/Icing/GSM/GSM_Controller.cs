@@ -35,6 +35,7 @@ namespace Icing
         public interface Bvr
         {
             bool IsWait { get; }
+            bool IsFinished { get; }
             Bvr Wait();
             Bvr To(Func<bool> condition, Flow flow);
             Flow GetTransition();
@@ -49,6 +50,7 @@ namespace Icing
             private Flow transitionFlow;
 
             public bool IsWait { get; private set; }
+            public bool IsFinished => isDone();
 
             public BvrSingle(StateEx stateEx, GSM_State state, Func<bool> isDone)
             {

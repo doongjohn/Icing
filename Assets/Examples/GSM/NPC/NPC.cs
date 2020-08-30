@@ -55,7 +55,7 @@ public class NPC : GSM_Controller
             .ForceDo(() => health <= 0, bvr_Death);
 
         flow_normal
-            .To(() => Input.GetKeyDown(KeyCode.Return), flow_angry)
+            .To(() => Input.GetKeyDown(KeyCode.Return) && !bvr_attack.IsFinished, flow_angry)
             .Do(() => targetDist < 3f, bvr_runAway)
             .Do(() => targetDist > 5f, bvr_follow);
 
