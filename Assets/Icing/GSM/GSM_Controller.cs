@@ -1,30 +1,12 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEditorInternal;
 using UnityEngine;
 
 
 namespace Icing
 {
-
-    public class GSM_Controller : MonoBehaviour
+    public abstract class GSM_Controller : MonoBehaviour
     {
-        protected Flow curFlow;
-        protected Flow prevFlow;
-        protected Bvr curBvr;
-        protected Bvr prevBvr;
-        protected StateEx curStateEx;
-        protected StateEx prevStateEx;
-        protected GSM_State curState;
-        protected GSM_State prevState;
-
-        // Default
-        protected Flow beginFlow = new Flow();
-        protected GSM_State defaultState;
-        protected StateEx defaultStateEx;
-
-
         public class StateEx
         {
             public bool ResumeConsecutive { get; private set; }
@@ -50,7 +32,6 @@ namespace Icing
                 OnFixedUpdate = onFixedUpdate;
             }
         }
-
         public interface Bvr
         {
             bool IsWait { get; }
@@ -83,9 +64,9 @@ namespace Icing
                 stateEx = bvr.stateEx;
                 state = bvr.state;
                 isDone = bvr.isDone;
-                transitionFlowCondition = null;
-                transitionFlow = null;
-                IsWait = false;
+                transitionFlowCondition = bvr.transitionFlowCondition;
+                transitionFlow = bvr.transitionFlow;
+                IsWait = bvr.IsWait;
             }
 
             public Bvr Wait()
@@ -112,7 +93,6 @@ namespace Icing
                 return (stateEx, state);
             }
         }
-
         public class Flow
         {
             public class Node
@@ -130,25 +110,26 @@ namespace Icing
             }
 
             private List<Node> nodes = new List<Node>();
+            public static Node waitingNode = new Node();
 
             public Node GetCurNode(Bvr curBvr)
             {
-                Node node;
-                for (int i = 0; i < nodes.Count; i++)
+                if (curBvr != null && curBvr.IsWait && curBvr.GetCurState() != null)
                 {
-                    node = nodes[i];
-                    if (curBvr?.IsWait ?? false)
-                    {
-                        if (node.forceRun && node.condition())
-                            return node;
-                    }
-                    else
-                    {
-                        if (node.condition())
-                            return node;
-                    }
+                    for (int i = 0; i < nodes.Count; i++)
+                        if (nodes[i].forceRun && nodes[i].condition())
+                            return nodes[i];
+
+                    return waitingNode;
                 }
-                return null;
+                else
+                {
+                    for (int i = 0; i < nodes.Count; i++)
+                        if (nodes[i].condition())
+                            return nodes[i];
+
+                    return null;
+                }
             }
 
             public Flow Do(Func<bool> condition, Bvr bvr)
@@ -194,6 +175,17 @@ namespace Icing
         }
 
 
+        // GSM Data
+        protected Flow      curFlow,    prevFlow;
+        protected Bvr       curBvr,     prevBvr;
+        protected StateEx   curStateEx, prevStateEx;
+        protected GSM_State curState,   prevState;
+
+        // Default
+        protected Flow flow_begin = new Flow();
+        protected StateEx defaultStateEx;
+        protected GSM_State defaultState;
+
         protected virtual void Start()
         {
             GSM_Start();
@@ -201,29 +193,27 @@ namespace Icing
         protected virtual void Update()
         {
             GSM_Update();
-            OnUpdate();
+            curStateEx?.OnUpdate?.Invoke();
+            curState?.OnUpdate();
         }
         protected virtual void LateUpdate()
         {
-            OnLateUpdate();
+            curStateEx?.OnLateUpdate?.Invoke();
+            curState?.OnLateUpdate();
         }
         protected virtual void FixedUpdate()
         {
-            OnFixedUpdate();
+            curStateEx?.OnFixedUpdate?.Invoke();
+            curState?.OnFixedUpdate();
         }
 
-        protected void SetStartFlow(Flow flow)
+        protected void GSM_Init(Flow startingFlow, StateEx defaultStateEx, GSM_State defaultState)
         {
-            curFlow = flow;
+            // Call this method before GSM_Start()
+            this.curFlow = startingFlow;
+            this.defaultStateEx = curStateEx = defaultStateEx;
+            this.defaultState = curState = defaultState;
         }
-        protected void SetDefaultState(StateEx stateEx, GSM_State state)
-        {
-            defaultStateEx = stateEx;
-            defaultState = state;
-            curStateEx = stateEx;
-            curState = state;
-        }
-
         private void GSM_Start()
         {
             curStateEx.OnEnter?.Invoke();
@@ -237,7 +227,6 @@ namespace Icing
                 {
                     prevStateEx = curStateEx;
                     curStateEx = newStateEx;
-
                     prevStateEx?.OnExit?.Invoke();
                     curStateEx.OnEnter?.Invoke();
 
@@ -245,7 +234,6 @@ namespace Icing
                     {
                         prevState = curState;
                         curState = newState;
-
                         prevState?.OnExitWithDefer();
                         curState.OnEnter();
                     }
@@ -271,9 +259,16 @@ namespace Icing
             bool ProcessFlowNode(Flow flowToProcess)
             {
                 var curFlowNode = flowToProcess.GetCurNode(curBvr);
+
+                // When no available node
                 if (curFlowNode == null)
                     return false;
 
+                // When waiting
+                if (curFlowNode == Flow.waitingNode)
+                    return true;
+
+                // When not waiting
                 if (curFlowNode is Flow.BvrNode bvrNode)
                 {
                     var bvr = bvrNode.bvr;
@@ -286,9 +281,7 @@ namespace Icing
                     {
                         var transitionFlow = bvr.GetTransition();
                         if (transitionFlow != null)
-                        {
                             return ChangeFlow(transitionFlow);
-                        }
                         return false;
                     }
                     // When Bvr is not done
@@ -306,7 +299,7 @@ namespace Icing
             }
 
             // Check begin flow
-            if (!ProcessFlowNode(beginFlow))
+            if (!ProcessFlowNode(flow_begin))
             {
                 // Check current flow
                 if (!ProcessFlowNode(curFlow))
@@ -315,21 +308,6 @@ namespace Icing
                     ChangeState(defaultStateEx, defaultState);
                 }
             }
-        }
-        private void OnUpdate()
-        {
-            curStateEx?.OnUpdate?.Invoke();
-            curState?.OnUpdate();
-        }
-        private void OnLateUpdate()
-        {
-            curStateEx?.OnLateUpdate?.Invoke();
-            curState?.OnLateUpdate();
-        }
-        private void OnFixedUpdate()
-        {
-            curStateEx?.OnFixedUpdate?.Invoke();
-            curState?.OnFixedUpdate();
         }
     }
 }

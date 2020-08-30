@@ -19,8 +19,8 @@ namespace Icing
             for (int i = 0; i < deferStack.Count; i++)
                 deferStack.Pop()();
         }
-        protected virtual void OnExit() { }
-        public virtual void OnEnter() { }
+        protected virtual void OnExit() { /*Debug.Log($"Exit <- {this.GetType().FullName}");*/ }
+        public virtual void OnEnter() { /*Debug.Log($"Enter -> {this.GetType().FullName}");*/ }
         public virtual void OnLateEnter() { }
         public virtual void OnUpdate() { }
         public virtual void OnLateUpdate() { }

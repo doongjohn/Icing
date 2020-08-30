@@ -1,6 +1,4 @@
 ﻿using Icing;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class NPC_Idle : GSM_State
@@ -9,7 +7,7 @@ public class NPC_Idle : GSM_State
 
     private void Awake()
     {
-        gameObject.GetComponent(ref rb2D);
+        gameObject.GetComponent(out rb2D);
     }
 
     public override void OnFixedUpdate()

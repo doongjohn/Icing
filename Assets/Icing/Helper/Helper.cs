@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -349,7 +348,7 @@ namespace Icing
         {
             return !go.scene.IsValid();
         }
-        public static void GetComponent<T>(this GameObject go, ref T variable) where T : Component
+        public static void GetComponent<T>(this GameObject go, out T variable) where T : Component
         {
             variable = go.GetComponent<T>();
         }

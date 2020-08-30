@@ -133,6 +133,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: NPC (4)
       objectReference: {fileID: 0}
+    - target: {fileID: 7195572660544391998, guid: 3c682c35fbaa04b4981415fe4bfa7046,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7195572660544391999, guid: 3c682c35fbaa04b4981415fe4bfa7046,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -202,6 +207,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: NPC (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 7195572660544391998, guid: 3c682c35fbaa04b4981415fe4bfa7046,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7195572660544391999, guid: 3c682c35fbaa04b4981415fe4bfa7046,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -270,6 +280,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: NPC (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7195572660544391998, guid: 3c682c35fbaa04b4981415fe4bfa7046,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7195572660544391999, guid: 3c682c35fbaa04b4981415fe4bfa7046,
         type: 3}
@@ -423,6 +438,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: NPC (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 7195572660544391998, guid: 3c682c35fbaa04b4981415fe4bfa7046,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7195572660544391999, guid: 3c682c35fbaa04b4981415fe4bfa7046,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -491,6 +511,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: NPC (10)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7195572660544391998, guid: 3c682c35fbaa04b4981415fe4bfa7046,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7195572660544391999, guid: 3c682c35fbaa04b4981415fe4bfa7046,
         type: 3}
@@ -561,6 +586,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: NPC (6)
       objectReference: {fileID: 0}
+    - target: {fileID: 7195572660544391998, guid: 3c682c35fbaa04b4981415fe4bfa7046,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7195572660544391999, guid: 3c682c35fbaa04b4981415fe4bfa7046,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -629,6 +659,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: NPC (8)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7195572660544391998, guid: 3c682c35fbaa04b4981415fe4bfa7046,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7195572660544391999, guid: 3c682c35fbaa04b4981415fe4bfa7046,
         type: 3}
@@ -699,6 +734,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: NPC (9)
       objectReference: {fileID: 0}
+    - target: {fileID: 7195572660544391998, guid: 3c682c35fbaa04b4981415fe4bfa7046,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7195572660544391999, guid: 3c682c35fbaa04b4981415fe4bfa7046,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -767,6 +807,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: NPC (5)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7195572660544391998, guid: 3c682c35fbaa04b4981415fe4bfa7046,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7195572660544391999, guid: 3c682c35fbaa04b4981415fe4bfa7046,
         type: 3}
@@ -930,6 +975,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: NPC (7)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7195572660544391998, guid: 3c682c35fbaa04b4981415fe4bfa7046,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7195572660544391999, guid: 3c682c35fbaa04b4981415fe4bfa7046,
         type: 3}
