@@ -1,16 +1,18 @@
 # Icing
 Some useful scripts for Unity game development
 
-## Scripts
-- 2D Platformer Character Controller (Rigidbody based) **60%**
-- UI Components **0%**
-- State Machine **40%**
+## Things
+- BPCC: Box Platformer Character Controller.  
+  (uses Rigidbody2D.)
+- GSM: Glorified State Machine.
 - Helpers
-  - Object pooling **0%**
-  - Timer **100%**
-  - Etc...
+  - Singleton
+  - Timer
+  - Helper extension methods
 
 ## TODO
-- Use [OpenUPM](https://openupm.com) format
+- Add Object pooling
+- Add UI Components
+- Add more useful scripts
 - Fix bugs
-- Add more useful scripts (visual/sound effects, save/load manager, etc...)
+- Use [OpenUPM](https://openupm.com) format
