@@ -12,9 +12,8 @@ public class NPC_Idle : GSM_State
         gameObject.GetComponent(ref rb2D);
     }
 
-    public override void OnEnter()
+    public override void OnFixedUpdate()
     {
-        base.OnEnter();
         rb2D.velocity = Vector2.zero;
     }
 }
