@@ -11,11 +11,13 @@ public class NPC : GSM_Controller
     {
         target = GameObject.Find("Target").transform;
 
+
         // Get states
         gameObject.GetComponent(out NPC_Death state_death);
         gameObject.GetComponent(out NPC_Idle state_idle);
         gameObject.GetComponent(out NPC_Follow state_follow);
         gameObject.GetComponent(out NPC_RunAway state_runAway);
+
 
         // Init Bvr
         var bvr_Death = new BvrSingle(
