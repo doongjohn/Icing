@@ -102,11 +102,11 @@ namespace Icing
         [SerializeField] private LayerMask oneWayLayer;
 
         private Transform tf;
+        private Vector2 prevPos;
         private LayerMask groundLayer;
         private RaycastHit2D[] hitArray;
         private List<Collider2D> ignoreGrounds = new List<Collider2D>();
         private BPCC_GroundData groundData;
-        private Vector2 prevPos;
         private bool inputFallThrough = false;
 
         public Vector2 slideDownVector;
@@ -231,9 +231,11 @@ namespace Icing
                 int hitCount = Physics2D.BoxCastNonAlloc(castData.pos, castData.size, 0f, castData.dir, hitArray, castData.dist, groundLayer);
                 for (int i = 0; i < hitCount; i++)
                 {
-                    if (ignoreGrounds.Contains(hitArray[i].collider)
-                    ||  hitArray[i].normal.y <= 0
-                    ||  (skipCondition?.Invoke(hitArray[i]) ?? false))
+                    if (ignoreGrounds.Contains(hitArray[i].collider))
+                        continue;
+                    if (hitArray[i].normal.y <= 0)
+                        continue;
+                    if (skipCondition != null && skipCondition(hitArray[i]))
                         continue;
 
                     // Note:
@@ -244,8 +246,7 @@ namespace Icing
                     && hitArray[i].point.y > pos.y - halfSize.y)
                         continue;
 
-                    if (hitArray[i].point.y >= hitData.point.y
-                    ||  hitData.collider == null)
+                    if (hitData.collider == null || hitArray[i].point.y >= hitData.point.y)
                         hitData = hitArray[i];
                 }
                 return hitData;
@@ -269,9 +270,6 @@ namespace Icing
             }
             void GetGround_DownSlope()
             {
-                // NOTE:
-                // 많은 발전이 이루어질 수 있는 부분이다.    
-
                 float downDist = Mathf.Max(vel.y * Time.deltaTime, contactOffset);
 
                 RaycastHit2D hitData = GetHighestGround(
@@ -308,21 +306,6 @@ namespace Icing
 
                 finalHitData = hitData;
             }
-            void CheckValley()
-            {
-                // 캐릭터의 양 끝에 경사가 있을 때
-                // 평평한 땅 위에 있는 것과 같은 걸로 처리하기 위함.
-
-                if (finalHitData.collider == null)
-                    return;
-
-                if (finalHitData.normal.x == 0)
-                    return;
-
-                var hitR = Physics2D.Raycast(pos.Add(x: halfSize.x), Vector2.down, halfSize.y, groundLayer);
-                var hitL = Physics2D.Raycast(pos.Add(x: -halfSize.x), Vector2.down, halfSize.y, groundLayer);
-                inValley = hitR.collider != null && hitL.collider != null;
-            }
 
             #endregion
 
@@ -336,23 +319,53 @@ namespace Icing
             if (finalHitData.collider == null && OnGround && prevVector.y > 0)
                 GetGround_Cross();
 
-            CheckValley();
+            // 캐릭터의 양 끝에 경사가 있을 때
+            // 평평한 땅 위에 있는 것과 같은 걸로 처리하기 위함.
+            if (finalHitData.collider != null && finalHitData.normal.y != 0 && finalHitData.normal.y > 0)
+            {
+                var hitR = Physics2D.Raycast(pos.Add(x: halfSize.x), Vector2.down, halfSize.y, groundLayer);
+                var hitL = Physics2D.Raycast(pos.Add(x: -halfSize.x), Vector2.down, halfSize.y, groundLayer);
+                inValley = hitR.collider != null && hitL.collider != null;
+            }
 
             #endregion
 
             #region Set Ground Data
 
+            // Not on Ground
             if (finalHitData.collider == null)
             {
                 ResetData();
             }
+            // On Ground
             else
             {
+                #region Set Ground Data
+
                 OnGround = true;
                 groundData.collider = finalHitData.collider;
                 groundData.gameObject = finalHitData.collider.gameObject;
-                groundData.normal = inValley ? Vector2.up : finalHitData.normal;
                 groundData.hitPoint = finalHitData.point;
+
+                if (inValley)
+                    groundData.normal = Vector2.up;
+                else
+                    groundData.normal = finalHitData.normal;
+
+                #endregion
+
+                #region Snap To Ground
+
+                Vector3 snapPos = tf.position;
+
+                snapPos.y = groundData.hitPoint.Value.y + halfSize.y;
+
+                if (groundData.normal.Value.x != 0 && prevDirX != 0)
+                    snapPos.x = groundData.hitPoint.Value.x + (halfSize.x * Mathf.Sign(groundData.normal.Value.x));
+
+                tf.position = snapPos;
+
+                #endregion
 
                 #region Calc Slide Down Vector
 
@@ -362,33 +375,21 @@ namespace Icing
                 if (groundData.normal.Value.x != 0)
                 {
                     float groundAngle = groundData.normal.Value.GetSurfaceAngle2D();
-
                     if (groundAngle > maxWalkAngle && !Mathf.Approximately(groundAngle, maxWalkAngle))
                     {
                         OnSteepSlope = true;
-                        slideDownVector = 
-                            Vector3.Cross(groundData.normal.Value.x > 0 ? Vector3.forward : Vector3.back, groundData.normal.Value).normalized *
+
+                        Vector3 crossDir;
+                        if (groundData.normal.Value.x > 0)
+                            crossDir = Vector3.forward;
+                        else
+                            crossDir = Vector3.back;
+
+                        slideDownVector =
+                            Vector3.Cross(crossDir, groundData.normal.Value).normalized *
                             Mathf.Max(vel.y + (slideAccel * Time.deltaTime), maxSlideSpeed);
                     }
                 }
-
-                #endregion
-
-                #region Snap To Ground
-
-                Vector3 snapPos = tf.position;
-
-                // Snap Y
-                snapPos.y = groundData.hitPoint.Value.y + halfSize.y;
-
-                // Snap X
-                if (groundData.normal.Value.x != 0 && prevDirX != 0)
-                {
-                    snapPos.x = groundData.hitPoint.Value.x + ((halfSize.x + contactOffset) * Mathf.Sign(groundData.normal.Value.x));
-                }
-
-                // Apply Snap
-                tf.position = snapPos;
 
                 #endregion
             }
@@ -413,16 +414,12 @@ namespace Icing
 
             #region Overlap Box
 
-            Vector2 detectPos = tf.position;
-            Vector2 detectSize = bodyData.Size;
-
             Collider2D[] overlaps =
                 Physics2D.OverlapBoxAll(
-                    detectPos,
-                    detectSize,
+                    tf.position,
+                    bodyData.Size,
                     0f,
-                    oneWayLayer
-                );
+                    oneWayLayer);
 
             #endregion
 
@@ -457,7 +454,9 @@ namespace Icing
 
             inputFallThrough = false;
 
-            if (overlaps == null || !OnGround)
+            if (overlaps == null)
+                return;
+            if (!OnGround)
                 return;
 
             for (int i = 0; i < overlaps.Length; i++)
@@ -526,9 +525,6 @@ namespace Icing
 
         public void CalcWalkVector(BPCC_GroundData groundData)
         {
-            WalkDir = Vector2.zero;
-            WalkVector = Vector2.zero;
-
             if (inputDir != 0)
             {
                 if (groundData.collider == null || (groundData.normal.HasValue && groundData.normal.Value == Vector2.up))
@@ -537,11 +533,20 @@ namespace Icing
                 }
                 else
                 {
-                    WalkDir = Vector3.Cross(inputDir == 1 ? Vector3.back : Vector3.forward, groundData.normal.Value).normalized;
+                    Vector3 crossDir;
+                    if (inputDir == 1)
+                        crossDir = Vector3.back;
+                    else
+                        crossDir = Vector3.forward;
+                    WalkDir = Vector3.Cross(crossDir, groundData.normal.Value).normalized;
                 }
             }
+            else
+            {
+                WalkDir = WalkVector = Vector2.zero;
+            }
 
-            // TODO
+            // TODO:
             // Do accel, decel, etc... calculation here
             WalkVector = WalkDir * walkSpeed;
         }
