@@ -75,7 +75,7 @@ namespace Icing
 
             public BvrSingle(StateEx stateEx, GSM_State state, Func<bool> isDone)
             {
-                this.stateEx = stateEx != null ? new StateEx() : stateEx;
+                this.stateEx = stateEx ?? new StateEx();
                 this.state = state;
                 this.isDone = isDone;
                 transitionFlowCondition = null;
@@ -235,7 +235,7 @@ namespace Icing
         {
             // Call this method before Start()
             this.curFlow = startingFlow;
-            this.defaultStateEx = curStateEx = defaultStateEx == null ? new StateEx() : defaultStateEx;
+            this.defaultStateEx = curStateEx = defaultStateEx ?? new StateEx();
             this.defaultState = curState = defaultState;
         }
         private void GSM_Update()
