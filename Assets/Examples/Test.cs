@@ -42,25 +42,42 @@ public class Test : MonoBehaviour
 
     void Awake()
     {
-        Vector3 vec = Vector3.zero;
+        float x = 0;
 
         TimeCode(
             new System.Diagnostics.Stopwatch(),
             100000,
             new TestCodeObj()
             {
-                testName = "Using if",
+                testName = "4 if",
                 code = () =>
                 {
-                    Change1(vec, x: 10);
+                    if (x == 100)
+                        return;
+
+                    if (x != 100)
+                        return;
+
+                    if (x != 1000)
+                        return;
+
+                    if (x != 3000)
+                        return;
+
+                    x = 10;
                 }
             },
             new TestCodeObj()
             {
-                testName = "Not Using if",
+                testName = "1 if",
                 code = () =>
                 {
-                    Change2(vec, x: 10);
+                    bool yay = x == 100 || x != 100 || x != 1000 || x != 1000;
+
+                    if (yay)
+                        return;
+
+                    x = 10;
                 }
             }
         );
