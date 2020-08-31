@@ -38,22 +38,22 @@ public class NPC : GSM_Controller
 
         // Init Bvr
         var bvr_Death = new BvrSingle(
-            stateEx: new StateEx(), // stateEx: null is not allowed!
-            state: state_death,    // state_death will be executed when this Bvr is currently active.
-            isDone: () => false    // If this returns true, then this Bvr is finished.
+            stateEx: null,      // Extra Data for transitioning state + Additional state action.
+            state: state_death, // state_death will be executed when this Bvr is currently active.
+            isDone: () => false // If this returns true, then this Bvr is finished.
         );
         var bvr_follow = new BvrSingle(
-            stateEx: new StateEx(),
+            stateEx: null,
             state: state_follow,
             isDone: () => targetDist <= 5f
         );
         var bvr_runAway = new BvrSingle(
-            stateEx: new StateEx(),
+            stateEx: null,
             state: state_runAway,
             isDone: () => targetDist >= 3f
         );
         var bvr_attack = new BvrSingle(
-            stateEx: new StateEx(),
+            stateEx: null,
             state: state_follow,
             isDone: () => targetDist <= 0.5f
         );
@@ -73,13 +73,13 @@ public class NPC : GSM_Controller
             .Do(() => targetDist > 5f, bvr_follow);
 
         flow_angry
-            .Do(() => true, bvr_attack.Wait() // Don't check Do() and To() until bvr_attack is finished.
+            .Do(() => true, bvr_attack.Wait()  // Don't check Do(), To() until bvr_attack is finished.
                 .To(() => true, flow_normal)); // Change current flow to flow_normal after bvr_attack is finished.
 
         // Init GSM
         GSM_Init(
             startingFlow: flow_normal,
-            defaultStateEx: new StateEx(),
+            defaultStateEx: null,
             defaultState: state_idle
         );
     }
