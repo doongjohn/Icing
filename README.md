@@ -11,13 +11,15 @@ Box Platformer Character Controller.
 - Snap to ground while walking on slope. (no bouncing.)
 - Supports one way platform.
 
+Video:
+
 [![BPCC Video](https://i.imgur.com/1YLaxbR.png)](https://www.youtube.com/watch?v=INcRnxI3td4&feature=youtu.be)
 
 ## GSM
 
 Glorified State Machine.
 
-Example code
+Example code:
 
 ```cs
 public class NPC : GSM_Controller
