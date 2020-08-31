@@ -23,11 +23,6 @@ public class NPC : GSM_Controller
             state: state_death,
             isDone: () => false
         );
-        var bvr_idle = new BvrSingle(
-            stateEx: new StateEx(),
-            state: state_idle,
-            isDone: () => false
-        );
         var bvr_follow = new BvrSingle(
             stateEx: new StateEx(),
             state: state_follow,
