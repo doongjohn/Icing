@@ -6,33 +6,33 @@ namespace Icing
 {
     public class TimerManager : SingletonBase<TimerManager>
     {
-        private readonly List<I_TimerData> timers_Update = new List<I_TimerData>();
-        private readonly List<I_TimerData> timers_LateUpdate = new List<I_TimerData>();
-        private readonly List<I_TimerData> timers_FixedUpdate = new List<I_TimerData>();
-
+        private readonly List<ITimer> timers_Update = new List<ITimer>();
+        private readonly List<ITimer> timers_LateUpdate = new List<ITimer>();
+        private readonly List<ITimer> timers_FixedUpdate = new List<ITimer>();
 
         private void Update()
         {
-            TickTimers(timers_Update, Time.deltaTime);
+            TickTimers(timers_Update);
         }
         private void LateUpdate()
         {
-            TickTimers(timers_LateUpdate, Time.deltaTime);
+            TickTimers(timers_LateUpdate);
         }
         private void FixedUpdate()
         {
-            TickTimers(timers_FixedUpdate, Time.fixedDeltaTime);
+            TickTimers(timers_FixedUpdate);
         }
 
-        public void TickTimers(List<I_TimerData> timers, float deltaTime)
+        public void TickTimers(List<ITimer> timers)
         {
             if (timers.Count == 0)
                 return;
 
+            float deltaTime = Time.deltaTime;
             for (int i = timers.Count - 1; i >= 0; i--)
             {
                 // Check Game Object
-                if (timers[i].User == null)
+                if (timers[i].Owner == null)
                 {
                     timers.RemoveAt(i);
                     continue;
@@ -42,7 +42,7 @@ namespace Icing
                 timers[i].Tick(deltaTime);
             }
         }
-        public void AddTimer(I_TimerData data, TimerTickMode mode)
+        public void AddTimer(ITimer data, TimerTickMode mode)
         {
             if (data == null || mode == TimerTickMode.Manual)
                 return;
@@ -50,17 +50,20 @@ namespace Icing
             switch (mode)
             {
                 case TimerTickMode.Update:
-                    if (!timers_Update.Contains(data)) timers_Update.Add(data);
+                    if (!timers_Update.Contains(data))
+                        timers_Update.Add(data);
                     break;
                 case TimerTickMode.LateUpdate:
-                    if (!timers_LateUpdate.Contains(data)) timers_LateUpdate.Add(data);
+                    if (!timers_LateUpdate.Contains(data))
+                        timers_LateUpdate.Add(data);
                     break;
                 case TimerTickMode.FixedUpdate:
-                    if (!timers_FixedUpdate.Contains(data)) timers_FixedUpdate.Add(data);
+                    if (!timers_FixedUpdate.Contains(data))
+                        timers_FixedUpdate.Add(data);
                     break;
             }
         }
-        public void RemoveTimer(I_TimerData data, TimerTickMode mode)
+        public void RemoveTimer(ITimer data, TimerTickMode mode)
         {
             if (data == null || mode == TimerTickMode.Manual)
                 return;
@@ -68,13 +71,16 @@ namespace Icing
             switch (mode)
             {
                 case TimerTickMode.Update:
-                    if (timers_Update.Contains(data)) timers_Update.Remove(data);
+                    if (timers_Update.Contains(data))
+                        timers_Update.Remove(data);
                     break;
                 case TimerTickMode.LateUpdate:
-                    if (timers_LateUpdate.Contains(data)) timers_LateUpdate.Remove(data);
+                    if (timers_LateUpdate.Contains(data))
+                        timers_LateUpdate.Remove(data);
                     break;
                 case TimerTickMode.FixedUpdate:
-                    if (timers_FixedUpdate.Contains(data)) timers_FixedUpdate.Remove(data);
+                    if (timers_FixedUpdate.Contains(data))
+                        timers_FixedUpdate.Remove(data);
                     break;
             }
         }

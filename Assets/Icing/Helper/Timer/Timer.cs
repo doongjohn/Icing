@@ -12,28 +12,25 @@ namespace Icing
         Manual
     }
 
-    public interface I_TimerData
+    public interface ITimer
     {
-        GameObject User { get; }
+        GameObject Owner { get; }
         void Tick(float deltaTime);
     }
-    public abstract class TimerData_Base<T> : I_TimerData
-        where T : TimerData_Base<T>
+    public abstract class TimerBase<T> : ITimer
+        where T : TimerBase<T>
     {
-        private TimerTickMode tickMode;
-        private Action onStart;
-        private Action onTick;
-        private Action onEnd;
-        private float curTime = 0f;
+        protected TimerTickMode tickMode;
+        protected Action onStart;
+        protected Action onTick;
+        protected Action onEnd;
+        protected float curTime = 0f;
 
-        protected abstract float GetEndTime // 타이머의 종료 시간.
-        { get; }
-
-        public GameObject User
-        { get; private set; }
+        public GameObject Owner
+        { get; protected set; }
         public bool IsActive
-        { get; private set; } = true;
-        public float CurTime // 타이머의 현재 시간.
+        { get; protected set; } = true;
+        public float CurTime
         {
             get => curTime;
             set
@@ -42,19 +39,24 @@ namespace Icing
                 IsEnded = value < GetEndTime;
             }
         }
+        protected abstract float GetEndTime
+        { get; }
         public bool IsEnded
-        { get; private set; }
+        { get; protected set; } = false;
         public bool IsZero => CurTime == 0;
 
-
-        public T SetTick(GameObject user, TimerTickMode tickMode = TimerTickMode.LateUpdate)
+        public TimerBase(GameObject owner, TimerTickMode tickMode = TimerTickMode.LateUpdate)
         {
-            User = user;
-            this.tickMode = tickMode;
-            TimerManager.Inst.RemoveTimer(this, TimerTickMode.Update);
-            TimerManager.Inst.RemoveTimer(this, TimerTickMode.LateUpdate);
-            TimerManager.Inst.RemoveTimer(this, TimerTickMode.FixedUpdate);
+            Owner = owner;
             TimerManager.Inst.AddTimer(this, tickMode);
+            this.tickMode = tickMode;
+        }
+
+        public T SetTickMode(TimerTickMode tickMode)
+        {
+            TimerManager.Inst.RemoveTimer(this, this.tickMode);
+            TimerManager.Inst.AddTimer(this, tickMode);
+            this.tickMode = tickMode;
             return this as T;
         }
         public T SetAction(Action onStart = null, Action onTick = null, Action onEnd = null)
@@ -90,7 +92,7 @@ namespace Icing
             IsEnded = true;
             return this as T;
         }
-        public void Tick(float deltaTime)
+        void ITimer.Tick(float deltaTime)
         {
             if (!IsActive || IsEnded)
                 return;
@@ -111,14 +113,20 @@ namespace Icing
     }
 
     [Serializable]
-    public class TimerData : TimerData_Base<TimerData>
+    public class Timer : TimerBase<Timer>
     {
         public float EndTime = 0;
         protected override float GetEndTime => EndTime;
+
+        public Timer(GameObject owner, TimerTickMode tickMode = TimerTickMode.LateUpdate)
+            : base(owner, tickMode) { }
     }
-    public class TimerStat : TimerData_Base<TimerStat>
+    public class TimerStat : TimerBase<TimerStat>
     {
         public FloatStat EndTime;
         protected override float GetEndTime => EndTime.Value;
+
+        public TimerStat(GameObject owner, TimerTickMode tickMode = TimerTickMode.LateUpdate)
+            : base(owner, tickMode) { }
     }
 }
