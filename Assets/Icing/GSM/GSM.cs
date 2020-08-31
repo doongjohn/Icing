@@ -211,36 +211,32 @@ namespace Icing
 
         protected virtual void Start()
         {
-            GSM_Start();
+            curStateEx.OnEnter?.Invoke();
+            curState.OnEnter();
         }
         protected virtual void Update()
         {
             GSM_Update();
-            curStateEx?.OnUpdate?.Invoke();
-            curState?.OnUpdate();
+            curStateEx.OnUpdate?.Invoke();
+            curState.OnUpdate();
         }
         protected virtual void LateUpdate()
         {
-            curStateEx?.OnLateUpdate?.Invoke();
-            curState?.OnLateUpdate();
+            curStateEx.OnLateUpdate?.Invoke();
+            curState.OnLateUpdate();
         }
         protected virtual void FixedUpdate()
         {
-            curStateEx?.OnFixedUpdate?.Invoke();
-            curState?.OnFixedUpdate();
+            curStateEx.OnFixedUpdate?.Invoke();
+            curState.OnFixedUpdate();
         }
 
         protected void GSM_Init(Flow startingFlow, StateEx defaultStateEx, GSM_State defaultState)
         {
-            // Call this method before GSM_Start()
+            // Call this method before Start()
             this.curFlow = startingFlow;
-            this.defaultStateEx = curStateEx = defaultStateEx;
+            this.defaultStateEx = curStateEx = defaultStateEx != null ? defaultStateEx : new StateEx();
             this.defaultState = curState = defaultState;
-        }
-        private void GSM_Start()
-        {
-            curStateEx.OnEnter?.Invoke();
-            curState.OnEnter();
         }
         private void GSM_Update()
         {
