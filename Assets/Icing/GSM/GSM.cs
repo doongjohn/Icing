@@ -75,7 +75,7 @@ namespace Icing
 
             public BvrSingle(StateEx stateEx, GSM_State state, Func<bool> isDone)
             {
-                this.stateEx = stateEx;
+                this.stateEx = stateEx == null ? new StateEx() : stateEx;
                 this.state = state;
                 this.isDone = isDone;
                 transitionFlowCondition = null;

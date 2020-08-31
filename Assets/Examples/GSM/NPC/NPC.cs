@@ -19,22 +19,22 @@ public class NPC : GSM_Controller
 
         // Init Bvr
         var bvr_Death = new BvrSingle(
-            stateEx: new StateEx(),
+            stateEx: null,
             state: state_death,
             isDone: () => false
         );
         var bvr_follow = new BvrSingle(
-            stateEx: new StateEx(),
+            stateEx: null,
             state: state_follow,
             isDone: () => targetDist <= 5f
         );
         var bvr_runAway = new BvrSingle(
-            stateEx: new StateEx(),
+            stateEx: null,
             state: state_runAway,
             isDone: () => targetDist >= 3f
         );
         var bvr_attack = new BvrSingle(
-            stateEx: new StateEx(),
+            stateEx: null,
             state: state_follow,
             isDone: () => targetDist <= 0.5f
         );
@@ -60,7 +60,7 @@ public class NPC : GSM_Controller
         // Init GSM
         GSM_Init(
             startingFlow: flow_normal,
-            defaultStateEx: new StateEx(),
+            defaultStateEx: null,
             defaultState: state_idle
         );
     }
