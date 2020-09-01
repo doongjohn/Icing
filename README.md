@@ -19,22 +19,27 @@ Video:
 
 Glorified State Machine.
 
-Example code:
+Example code: [Assets/Examples/GSM/NPC/NPC.cs](https://github.com/doongjohn/Icing/blob/master/Assets/Examples/GSM/NPC/NPC.cs)
 
 ```cs
 public class NPC : GSM_Controller
 {
-    private Transform target;
     private float targetDist;
     private int health = 10;
 
+    [HideInInspector] public Rigidbody2D rb2D;
+    [HideInInspector] public Transform target;
+
     protected void Awake()
     {
+        // Get other things
+        gameObject.GetComponent(out rb2D);
         target = GameObject.Find("Target").transform;
 
         // Get states
         gameObject.GetComponent(out NPC_Death state_death);
         gameObject.GetComponent(out NPC_Idle state_idle);
+        gameObject.GetComponent(out NPC_Sleep state_sleep);
         gameObject.GetComponent(out NPC_Follow state_follow);
         gameObject.GetComponent(out NPC_RunAway state_runAway);
 
@@ -42,7 +47,7 @@ public class NPC : GSM_Controller
         var bvr_Death = new BvrSingle(
             stateEx: null,      // Extra Data for transitioning state + Additional state action.
             state: state_death, // state_death will be executed when this Bvr is currently active.
-            isDone: () => false // If this returns true, then this Bvr is finished.
+            isDone: () => false // If this returns true, this Bvr is finished.
         );
         var bvr_follow = new BvrSingle(
             stateEx: null,
@@ -54,10 +59,18 @@ public class NPC : GSM_Controller
             state: state_runAway,
             isDone: () => targetDist >= 3f
         );
-        var bvr_attack = new BvrSingle(
-            stateEx: null,
-            state: state_follow,
-            isDone: () => targetDist <= 0.5f
+        var bvr_attack = new BvrSequence(
+            restartOnEnter: true,
+            (
+                stateEx: null,
+                state: state_follow,
+                isDone: () => targetDist <= 0.5f // If this returns true, execute state_sleep
+            ),
+            (
+                stateEx: null,
+                state: state_sleep,
+                isDone: () => targetDist >= 3f // If this returns true, this Bvr is finished.
+            )
         );
 
         // Init Flow
@@ -67,7 +80,7 @@ public class NPC : GSM_Controller
         // Define Flow Logic
         // "flow_begin" will be always checked before checking the current flow.
         flow_begin
-            .ForceDo(() => health <= 0, bvr_Death); // ForceDo() and ForceTo() will be always checked even when Bvr.Wait() is not finished.
+            .ForceDo(() => health <= 0, bvr_Death); // ForceDo(), ForceTo() is always checked even when Bvr.Wait() is not finished.
 
         flow_normal
             .To(() => Input.GetKeyDown(KeyCode.Return) && !bvr_attack.IsFinished, flow_angry) // Press Enter to change current flow to flow_angry.
@@ -75,8 +88,8 @@ public class NPC : GSM_Controller
             .Do(() => targetDist > 5f, bvr_follow);
 
         flow_angry
-            .Do(() => true, bvr_attack.Wait()  // Don't check Do(), To() until bvr_attack is finished.
-                .To(() => true, flow_normal)); // Change current flow to flow_normal after bvr_attack is finished.
+            .Do(() => true, bvr_attack.Wait()  // bvr_attack.Wait() -> Don't check Do(), To() until bvr_attack is finished.
+                .To(() => true, flow_normal)); // bvr_attack.To()   -> Change current flow to flow_normal if bvr_attack is finished.
 
         // Init GSM
         GSM_Init(
@@ -87,8 +100,8 @@ public class NPC : GSM_Controller
     }
     protected override void Update()
     {
-        base.Update();
         targetDist = Vector2.Distance(target.position, transform.position);
+        base.Update(); // This is necessary! (processing flow, bvr, etc... is done here.)
     }
 }
 ```

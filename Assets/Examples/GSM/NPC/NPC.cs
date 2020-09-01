@@ -78,7 +78,7 @@ public class NPC : GSM_Controller
     }
     protected override void Update()
     {
-        base.Update();
         targetDist = Vector2.Distance(target.position, transform.position);
+        base.Update();
     }
 }
