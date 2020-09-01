@@ -356,74 +356,78 @@ namespace Icing
         }
         #endregion
 
-        // GSM Data
-        protected Flow      curFlow,    prevFlow;
-        protected Bvr       curBvr,     prevBvr;
-        protected StateEx   curStateEx, prevStateEx;
-        protected GSM_State curState,   prevState;
-
-        // Default
+        // GSM Default Data
         protected Flow flow_begin = new Flow();
         protected StateEx defaultStateEx;
         protected GSM_State defaultState;
 
+        // GSM Data
+        public Flow CurFlow { get; private set; }
+        public Flow PrevFlow { get; private set; }
+        public Bvr CurBvr { get; private set; }
+        public Bvr PrevBvr { get; private set; }
+        public StateEx CurStateEx { get; private set; }
+        public StateEx PrevStateEx { get; private set; }
+        public GSM_State CurState { get; private set; }
+        public GSM_State PrevState { get; private set; }
+
         protected virtual void Start()
         {
-            curStateEx.OnEnter?.Invoke();
-            curState.OnEnter();
+            CurStateEx.OnEnter?.Invoke();
+            CurState.OnEnter();
         }
         protected virtual void Update()
         {
             GSM_Update();
-            curStateEx.OnUpdate?.Invoke();
-            curState.OnUpdate();
+            CurStateEx.OnUpdate?.Invoke();
+            CurState.OnUpdate();
         }
         protected virtual void LateUpdate()
         {
-            curStateEx.OnLateUpdate?.Invoke();
-            curState.OnLateUpdate();
+            CurStateEx.OnLateUpdate?.Invoke();
+            CurState.OnLateUpdate();
         }
         protected virtual void FixedUpdate()
         {
-            curStateEx.OnFixedUpdate?.Invoke();
-            curState.OnFixedUpdate();
+            CurStateEx.OnFixedUpdate?.Invoke();
+            CurState.OnFixedUpdate();
         }
 
         protected void GSM_Init(Flow startingFlow, StateEx defaultStateEx, GSM_State defaultState)
         {
             // Call this method before Start()
-            this.curFlow = startingFlow;
-            this.defaultStateEx = curStateEx = defaultStateEx ?? new StateEx();
-            this.defaultState = curState = defaultState;
+            this.CurFlow = startingFlow;
+            this.defaultStateEx = CurStateEx = defaultStateEx ?? new StateEx();
+            this.defaultState = CurState = defaultState;
         }
         private void GSM_Update()
         {
             void ChangeState(StateEx newStateEx, GSM_State newState)
             {
-                if (newStateEx != curStateEx)
+                if (newStateEx != CurStateEx)
                 {
-                    prevStateEx = curStateEx;
-                    curStateEx = newStateEx;
-                    prevStateEx?.OnExit?.Invoke();
-                    curStateEx.OnEnter?.Invoke();
+                    PrevStateEx = CurStateEx;
+                    CurStateEx = newStateEx;
+                    PrevStateEx?.OnExit?.Invoke();
+                    CurStateEx.OnEnter?.Invoke();
 
                     // 현재 또는 다음 StateEx의 ResumeConsecutive가 false일 경우 OnExit->OnEnter을 실행함.
-                    if (newState != curState || (newState == curState && (!curStateEx.ResumeConsecutive || !newStateEx.ResumeConsecutive)))
+                    if (newState != CurState || (newState == CurState && (!CurStateEx.ResumeConsecutive || !newStateEx.ResumeConsecutive)))
                     {
-                        prevState = curState;
-                        curState = newState;
-                        prevState?.OnExitWithDefer();
-                        curState.OnEnter();
+                        PrevState = CurState;
+                        CurState = newState;
+                        PrevState?.OnExitWithDefer();
+                        CurState.OnEnter();
                     }
                 }
             }
             void ChangeBvr(Bvr newBvr)
             {
-                if (newBvr != curBvr)
+                if (newBvr != CurBvr)
                 {
-                    prevBvr = curBvr;
-                    curBvr = newBvr;
-                    curBvr.BvrEnter();
+                    PrevBvr = CurBvr;
+                    CurBvr = newBvr;
+                    CurBvr.BvrEnter();
                 }
             }
             bool ProcessBvr(Bvr bvr)
@@ -447,16 +451,16 @@ namespace Icing
             }
             bool ChangeFlow(Flow newFlow)
             {
-                prevFlow = curFlow;
-                curFlow = newFlow;
+                PrevFlow = CurFlow;
+                CurFlow = newFlow;
 
                 // NOTE:
                 // ※ 스택 오버플로우 주의!!!
-                return ProcessFlowNode(curFlow);
+                return ProcessFlowNode(CurFlow);
             }
             bool ProcessFlowNode(Flow flowToProcess)
             {
-                var curFlowNode = flowToProcess.GetCurNode(curBvr);
+                var curFlowNode = flowToProcess.GetCurNode(CurBvr);
 
                 // When no available node
                 if (curFlowNode == null)
@@ -464,7 +468,7 @@ namespace Icing
 
                 // When waiting
                 if (curFlowNode == Flow.waitingNode)
-                    return ProcessBvr(curBvr);
+                    return ProcessBvr(CurBvr);
 
                 // When not waiting
                 if (curFlowNode is Flow.BvrNode bvrNode)
@@ -484,7 +488,7 @@ namespace Icing
             if (!ProcessFlowNode(flow_begin))
             {
                 // Check current flow
-                if (!ProcessFlowNode(curFlow))
+                if (!ProcessFlowNode(CurFlow))
                 {
                     // If no bvr is active, then set default state
                     ChangeState(defaultStateEx, defaultState);
