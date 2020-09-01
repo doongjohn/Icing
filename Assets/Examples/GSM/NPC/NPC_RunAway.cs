@@ -12,6 +12,6 @@ public class NPC_RunAway : GSM_State
 
     public override void OnFixedUpdate()
     {
-        npc.rb2D.velocity = (transform.position - npc.target.position).normalized * 10f;
+        npc.rb2D.velocity = (transform.position - npc.target.position).normalized * 15f;
     }
 }
