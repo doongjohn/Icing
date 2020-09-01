@@ -25,7 +25,7 @@ Example code: [Assets/Examples/GSM/NPC/NPC.cs](https://github.com/doongjohn/Icin
 public class NPC : GSM_Controller
 {
     private float targetDist;
-    private int health = 10;
+    private int health = 5;
 
     [HideInInspector] public Rigidbody2D rb2D;
     [HideInInspector] public Transform target;
@@ -39,6 +39,7 @@ public class NPC : GSM_Controller
         // Get states
         gameObject.GetComponent(out NPC_Death state_death);
         gameObject.GetComponent(out NPC_Idle state_idle);
+        gameObject.GetComponent(out NPC_Attack state_attack);
         gameObject.GetComponent(out NPC_Sleep state_sleep);
         gameObject.GetComponent(out NPC_Follow state_follow);
         gameObject.GetComponent(out NPC_RunAway state_runAway);
@@ -63,7 +64,7 @@ public class NPC : GSM_Controller
             restartOnEnter: true,
             (
                 stateEx: null,
-                state: state_follow,
+                state: state_attack,
                 isDone: () => targetDist <= 0.5f // If this returns true, execute state_sleep
             ),
             (
@@ -102,6 +103,10 @@ public class NPC : GSM_Controller
     {
         targetDist = Vector2.Distance(target.position, transform.position);
         base.Update(); // This is necessary! (processing flow, bvr, etc... is done here.)
+    }
+    private void OnMouseDown()
+    {
+        health--; // Click 5 times to kill this NPC
     }
 }
 ```

@@ -18,8 +18,8 @@ public class NPC : GSM_Controller
         // Get states
         gameObject.GetComponent(out NPC_Death state_death);
         gameObject.GetComponent(out NPC_Idle state_idle);
-        gameObject.GetComponent(out NPC_Sleep state_sleep);
         gameObject.GetComponent(out NPC_Attack state_attack);
+        gameObject.GetComponent(out NPC_Sleep state_sleep);
         gameObject.GetComponent(out NPC_Follow state_follow);
         gameObject.GetComponent(out NPC_RunAway state_runAway);
 
