@@ -61,7 +61,6 @@ namespace Icing
         public interface Bvr
         {
             bool IsWait { get; }
-            bool IsFinished { get; }
 
             Bvr Wait();
             Bvr To(Func<bool> condition, Flow flow);
@@ -78,7 +77,6 @@ namespace Icing
             private Flow transitionFlow;
 
             public bool IsWait { get; private set; }
-            public bool IsFinished => isDone();
 
             public BvrSingle(StateEx stateEx, GSM_State state, Func<bool> isDone)
             {
@@ -138,7 +136,6 @@ namespace Icing
             private Flow transitionFlow;
 
             public bool IsWait { get; private set; }
-            public bool IsFinished => curRepeatCount == repeatCount;
 
             public BvrRepeat(bool restartOnEnter, int repeatCount, StateEx stateEx, GSM_State state, Func<bool> isDone)
             {
@@ -211,7 +208,6 @@ namespace Icing
             private Flow transitionFlow;
 
             public bool IsWait { get; private set; }
-            public bool IsFinished => curIndex == stateList.Length;
 
             public BvrSequence(bool restartOnEnter, params (StateEx stateEx, GSM_State state, Func<bool> isDone)[] stateList)
             {
@@ -293,26 +289,6 @@ namespace Icing
             private List<Node> nodes = new List<Node>();
             public static Node waitingNode = new Node();
 
-            public Node GetCurNode(Bvr curBvr)
-            {
-                if (curBvr != null && curBvr.IsWait && curBvr.GetCurState() != null)
-                {
-                    for (int i = 0; i < nodes.Count; i++)
-                        if (nodes[i].forceRun && nodes[i].condition())
-                            return nodes[i];
-
-                    return waitingNode;
-                }
-                else
-                {
-                    for (int i = 0; i < nodes.Count; i++)
-                        if (nodes[i].condition())
-                            return nodes[i];
-
-                    return null;
-                }
-            }
-
             public Flow Do(Func<bool> condition, Bvr bvr)
             {
                 nodes.Add(new BvrNode()
@@ -352,6 +328,26 @@ namespace Icing
                     flow = flow
                 });
                 return this;
+            }
+
+            public Node GetCurNode(Bvr curBvr)
+            {
+                if (curBvr != null && curBvr.IsWait && curBvr.GetCurState() != null)
+                {
+                    for (int i = 0; i < nodes.Count; i++)
+                        if (nodes[i].forceRun && nodes[i].condition())
+                            return nodes[i];
+
+                    return waitingNode;
+                }
+                else
+                {
+                    for (int i = 0; i < nodes.Count; i++)
+                        if (nodes[i].condition())
+                            return nodes[i];
+
+                    return null;
+                }
             }
         }
         #endregion
@@ -439,7 +435,10 @@ namespace Icing
                 {
                     var transitionFlow = bvr.GetTransition();
                     if (transitionFlow != null)
-                        return ChangeFlow(transitionFlow);
+                    {
+                        ChangeFlow(transitionFlow);
+                        return true;
+                    }
                     return false;
                 }
                 // When Bvr is not done
@@ -449,14 +448,10 @@ namespace Icing
                     return true;
                 }
             }
-            bool ChangeFlow(Flow newFlow)
+            void ChangeFlow(Flow newFlow)
             {
                 PrevFlow = CurFlow;
                 CurFlow = newFlow;
-
-                // NOTE:
-                // ※ 스택 오버플로우 주의!!!
-                return ProcessFlowNode(CurFlow);
             }
             bool ProcessFlowNode(Flow flowToProcess)
             {
@@ -479,7 +474,8 @@ namespace Icing
                 }
                 else if (curFlowNode is Flow.FlowNode flowNode)
                 {
-                    return ChangeFlow(flowNode.flow);
+                    ChangeFlow(flowNode.flow);
+                    return true;
                 }
                 return false;
             }
