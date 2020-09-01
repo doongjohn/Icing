@@ -348,9 +348,18 @@ namespace Icing
         {
             return !go.scene.IsValid();
         }
-        public static void GetComponent<T>(this GameObject go, out T variable) where T : Component
+
+        public static void GetComponent<T>(this GameObject go, out T componentVar) where T : Component
         {
-            variable = go.GetComponent<T>();
+            componentVar = go.GetComponent<T>();
+        }
+        public static void GetComponentInChildren<T>(this GameObject go, out T componentVar) where T : Component
+        {
+            componentVar = go.GetComponentInChildren<T>();
+        }
+        public static void GetComponentInParent<T>(this GameObject go, out T componentVar) where T : Component
+        {
+            componentVar = go.GetComponentInParent<T>();
         }
 
         public static void ClearAllChildren(this GameObject target)
@@ -371,44 +380,44 @@ namespace Icing
 
     public static class AnimatorHelper
     {
-        public static float CurrentClipTime(this Animator animator)
+        public static float CurrentClipTime(this Animator animator, int layerIndex = 0)
         {
-            return animator.GetCurrentAnimatorStateInfo(0).length * (1 - animator.GetCurrentAnimatorStateInfo(0).normalizedTime);
+            return animator.GetCurrentAnimatorStateInfo(layerIndex).length * (1 - animator.GetCurrentAnimatorStateInfo(0).normalizedTime);
         }
-        public static float CurrentClipLength(this Animator animator)
+        public static float CurrentClipLength(this Animator animator, int layerIndex = 0)
         {
-            return animator.GetCurrentAnimatorStateInfo(0).length;
-        }
-
-        public static bool CheckCurrentClipName(this Animator animator, string nameToCompare)
-        {
-            return animator.GetCurrentAnimatorStateInfo(0).IsName(nameToCompare);
-        }
-        public static float GetNormalizedTime(this Animator animator)
-        {
-            return animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+            return animator.GetCurrentAnimatorStateInfo(layerIndex).length;
         }
 
-        public static void SetDuration(this Animator animator, float duration, string animName = null)
+        public static bool CompareCurrentClipName(this Animator animator, string nameToCompare, int layerIndex = 0)
         {
-            if ((animName != null && !animator.CheckCurrentClipName(animName)) || duration <= 0)
+            return animator.GetCurrentAnimatorStateInfo(layerIndex).IsName(nameToCompare);
+        }
+        public static float CurrentNormalizedTime(this Animator animator, int layerIndex = 0)
+        {
+            return animator.GetCurrentAnimatorStateInfo(layerIndex).normalizedTime;
+        }
+
+        public static void SetDuration(this Animator animator, float duration, string animName = null, int layerIndex = 0)
+        {
+            if ((animName != null && !animator.CompareCurrentClipName(animName)) || duration <= 0)
             {
                 animator.speed = 1;
                 return;
             }
 
-            animator.speed = animator.GetCurrentAnimatorClipInfo(0)[0].clip.length / duration;
+            animator.speed = animator.GetCurrentAnimatorClipInfo(layerIndex)[0].clip.length / duration;
         }
-        public static void SetDuration(this Animator animator, float duration, float maxDuration, string animName = null)
+        public static void SetDuration(this Animator animator, float duration, float maxDuration, string animName = null, int layerIndex = 0)
         {
-            if ((animName != null && !animator.CheckCurrentClipName(animName)) || duration <= 0)
+            if ((animName != null && !animator.CompareCurrentClipName(animName)) || duration <= 0)
             {
                 animator.speed = 1;
                 return;
             }
 
             duration = maxDuration <= 0 || duration < maxDuration ? duration : maxDuration;
-            animator.speed = animator.GetCurrentAnimatorClipInfo(0)[0].clip.length / duration;
+            animator.speed = animator.GetCurrentAnimatorClipInfo(layerIndex)[0].clip.length / duration;
         }
         public static void ResetSpeed(this Animator animator)
         {

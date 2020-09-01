@@ -3,17 +3,15 @@ using UnityEngine;
 
 public class NPC_RunAway : GSM_State
 {
-    private Rigidbody2D rb2D;
-    private Transform target;
+    private NPC npc;
 
     private void Awake()
     {
-        gameObject.GetComponent(out rb2D);
-        target = GameObject.Find("Target").transform;
+        gameObject.GetComponent(out npc);
     }
 
     public override void OnFixedUpdate()
     {
-        rb2D.velocity = (transform.position - target.position).normalized * 10f;
+        npc.rb2D.velocity = (transform.position - npc.target.position).normalized * 10f;
     }
 }

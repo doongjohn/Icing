@@ -3,17 +3,22 @@ using UnityEngine;
 
 public class NPC : GSM_Controller
 {
-    private Transform target;
     private float targetDist;
     private int health = 10;
 
+    [HideInInspector] public Rigidbody2D rb2D;
+    [HideInInspector] public Transform target;
+
     protected void Awake()
     {
+        // Get other things
+        gameObject.GetComponent(out rb2D);
         target = GameObject.Find("Target").transform;
 
         // Get states
         gameObject.GetComponent(out NPC_Death state_death);
         gameObject.GetComponent(out NPC_Idle state_idle);
+        gameObject.GetComponent(out NPC_Sleep state_sleep);
         gameObject.GetComponent(out NPC_Follow state_follow);
         gameObject.GetComponent(out NPC_RunAway state_runAway);
 
@@ -33,10 +38,18 @@ public class NPC : GSM_Controller
             state: state_runAway,
             isDone: () => targetDist >= 3f
         );
-        var bvr_attack = new BvrSingle(
-            stateEx: null,
-            state: state_follow,
-            isDone: () => targetDist <= 0.5f
+        var bvr_attack = new BvrSequence(
+            restartOnEnter: true,
+            (
+                stateEx: null,
+                state: state_follow,
+                isDone: () => targetDist <= 0.5f 
+            ),
+            (
+                stateEx: null,
+                state: state_sleep,
+                isDone: () => targetDist >= 3f
+            )
         );
 
         // Init Flow
@@ -44,7 +57,6 @@ public class NPC : GSM_Controller
         var flow_angry = new Flow();
 
         // Define Flow Logic
-        // "flow_begin" will be always checked before checking the current flow.
         flow_begin
             .ForceDo(() => health <= 0, bvr_Death);
 
