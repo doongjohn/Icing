@@ -426,6 +426,11 @@ namespace Icing
                     CurBvr.BvrEnter();
                 }
             }
+            void ChangeFlow(Flow newFlow)
+            {
+                PrevFlow = CurFlow;
+                CurFlow = newFlow;
+            }
             bool ProcessBvr(Bvr bvr)
             {
                 var stateData = bvr.GetCurState();
@@ -448,11 +453,6 @@ namespace Icing
                     return true;
                 }
             }
-            void ChangeFlow(Flow newFlow)
-            {
-                PrevFlow = CurFlow;
-                CurFlow = newFlow;
-            }
             bool ProcessFlowNode(Flow flowToProcess)
             {
                 var curFlowNode = flowToProcess.GetCurNode(CurBvr);
@@ -466,16 +466,14 @@ namespace Icing
                     return ProcessBvr(CurBvr);
 
                 // When not waiting
-                if (curFlowNode is Flow.BvrNode bvrNode)
+                switch (curFlowNode)
                 {
-                    Bvr bvr = bvrNode.bvr;
-                    ChangeBvr(bvr);
-                    return ProcessBvr(bvr);
-                }
-                else if (curFlowNode is Flow.FlowNode flowNode)
-                {
-                    ChangeFlow(flowNode.flow);
-                    return true;
+                    case Flow.BvrNode bvrNode:
+                        ChangeBvr(bvrNode.bvr);
+                        return ProcessBvr(CurBvr);
+                    case Flow.FlowNode flowNode:
+                        ChangeFlow(flowNode.flow);
+                        return true;
                 }
                 return false;
             }

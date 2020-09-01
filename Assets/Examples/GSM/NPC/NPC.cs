@@ -44,7 +44,7 @@ public class NPC : GSM_Controller
             (
                 stateEx: null,
                 state: state_attack,
-                isDone: () => targetDist <= 0.5f 
+                isDone: () => targetDist <= 0.5f
             ),
             (
                 stateEx: null,
