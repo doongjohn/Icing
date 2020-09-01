@@ -84,7 +84,7 @@ public class NPC : GSM_Controller
             .ForceDo(() => health <= 0, bvr_Death); // ForceDo(), ForceTo() is always checked even when Bvr.Wait() is not finished.
 
         flow_normal
-            .To(() => Input.GetKeyDown(KeyCode.Return) && !bvr_attack.IsFinished, flow_angry) // Press Enter to change current flow to flow_angry.
+            .To(() => Input.GetKeyDown(KeyCode.Return), flow_angry) // Press Enter to change current flow to flow_angry.
             .Do(() => targetDist < 3f, bvr_runAway)
             .Do(() => targetDist > 5f, bvr_follow);
 
