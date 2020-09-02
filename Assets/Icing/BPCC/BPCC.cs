@@ -499,24 +499,16 @@ namespace Icing
 
         public void GetInput(KeyCode plusKey, KeyCode minusKey)
         {
-            if (!CanWalk.Value)
+            if (!CanWalk.Value || (!Input.GetKey(plusKey) && !Input.GetKey(minusKey)))
             {
                 inputDir = 0;
                 return;
             }
 
-            if (Input.GetKeyDown(plusKey))
+            if (Input.GetKeyDown(plusKey) || (Input.GetKey(plusKey) && Input.GetKeyUp(minusKey)))
                 inputDir = 1;
-            if (Input.GetKeyDown(minusKey))
+            if (Input.GetKeyDown(minusKey) || (Input.GetKey(minusKey) && Input.GetKeyUp(plusKey)))
                 inputDir = -1;
-
-            if (Input.GetKey(minusKey) && Input.GetKeyUp(plusKey))
-                inputDir = -1;
-            if (Input.GetKey(plusKey) && Input.GetKeyUp(minusKey))
-                inputDir = 1;
-
-            if (!Input.GetKey(plusKey) && !Input.GetKey(minusKey))
-                inputDir = 0;
         }
         public void ResetInput()
         {
