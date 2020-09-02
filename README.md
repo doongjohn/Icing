@@ -22,7 +22,7 @@ Glorified State Machine.
 Example code: [Assets/Examples/GSM/NPC/NPC.cs](https://github.com/doongjohn/Icing/blob/master/Assets/Examples/GSM/NPC/NPC.cs)
 
 ```cs
-public class NPC : GSM_Controller
+public class NPC : GSM_NormalController
 {
     private float targetDist;
     private int health = 5;
