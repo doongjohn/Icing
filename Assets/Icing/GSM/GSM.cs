@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using UnityEditorInternal;
 using UnityEngine;
 
 namespace Icing
@@ -30,6 +29,7 @@ namespace Icing
     public abstract class GSM_Controller : MonoBehaviour
     {
         #region StatEx
+
         public class StateEx
         {
             public bool ResumeConsecutive { get; private set; }
@@ -55,15 +55,18 @@ namespace Icing
                 OnFixedUpdate = onFixedUpdate;
             }
         }
+
         #endregion
 
         #region Bvr
+
         public interface Bvr
         {
             bool IsWait { get; }
 
             Bvr Wait();
             Bvr To(Func<bool> condition, Flow flow);
+
             Flow GetTransition();
             void BvrEnter();
             (StateEx stateEx, GSM_State state)? GetCurState();
@@ -109,6 +112,7 @@ namespace Icing
                     transitionFlow = flow
                 };
             }
+
             public Flow GetTransition()
             {
                 if (transitionFlowCondition != null && transitionFlowCondition())
@@ -174,6 +178,7 @@ namespace Icing
                     transitionFlow = flow
                 };
             }
+
             public Flow GetTransition()
             {
                 if (transitionFlowCondition != null && transitionFlowCondition())
@@ -242,6 +247,7 @@ namespace Icing
                     transitionFlow = flow
                 };
             }
+
             public Flow GetTransition()
             {
                 if (transitionFlowCondition != null && transitionFlowCondition())
@@ -267,9 +273,11 @@ namespace Icing
                 return (stateList[curIndex].stateEx, stateList[curIndex].state);
             }
         }
+
         #endregion
 
         #region Flow
+
         public class Flow
         {
             public class Node
@@ -287,7 +295,7 @@ namespace Icing
             }
 
             private List<Node> nodes = new List<Node>();
-            public static Node waitingNode = new Node();
+            public readonly static Node waitingNode = new Node();
 
             public Flow Do(Func<bool> condition, Bvr bvr)
             {
@@ -350,6 +358,7 @@ namespace Icing
                 }
             }
         }
+
         #endregion
 
         // GSM Default Data
@@ -358,6 +367,8 @@ namespace Icing
         protected GSM_State defaultState;
 
         // GSM Data
+        private bool onLateEnterDone = false;
+
         public Flow CurFlow { get; private set; }
         public Flow PrevFlow { get; private set; }
         public Bvr CurBvr { get; private set; }
@@ -367,28 +378,6 @@ namespace Icing
         public GSM_State CurState { get; private set; }
         public GSM_State PrevState { get; private set; }
 
-        protected virtual void Start()
-        {
-            CurStateEx.OnEnter?.Invoke();
-            CurState.OnEnter();
-        }
-        protected virtual void Update()
-        {
-            GSM_Update();
-            CurStateEx.OnUpdate?.Invoke();
-            CurState.OnUpdate();
-        }
-        protected virtual void LateUpdate()
-        {
-            CurStateEx.OnLateUpdate?.Invoke();
-            CurState.OnLateUpdate();
-        }
-        protected virtual void FixedUpdate()
-        {
-            CurStateEx.OnFixedUpdate?.Invoke();
-            CurState.OnFixedUpdate();
-        }
-
         protected void GSM_Init(Flow startingFlow, StateEx defaultStateEx, GSM_State defaultState)
         {
             // Call this method before Start()
@@ -396,7 +385,7 @@ namespace Icing
             this.defaultStateEx = CurStateEx = defaultStateEx ?? new StateEx();
             this.defaultState = CurState = defaultState;
         }
-        private void GSM_Update()
+        protected void GSM_Update()
         {
             void ChangeState(StateEx newStateEx, GSM_State newState)
             {
@@ -410,6 +399,7 @@ namespace Icing
                     // 현재 또는 다음 StateEx의 ResumeConsecutive가 false일 경우 OnExit->OnEnter을 실행함.
                     if (newState != CurState || (newState == CurState && (!CurStateEx.ResumeConsecutive || !newStateEx.ResumeConsecutive)))
                     {
+                        onLateEnterDone = false;
                         PrevState = CurState;
                         CurState = newState;
                         PrevState?.OnExitWithDefer();
@@ -474,8 +464,9 @@ namespace Icing
                     case Flow.FlowNode flowNode:
                         ChangeFlow(flowNode.flow);
                         return true;
+                    default:
+                        return false;
                 }
-                return false;
             }
 
             // Check begin flow
@@ -488,6 +479,55 @@ namespace Icing
                     ChangeState(defaultStateEx, defaultState);
                 }
             }
+        }
+
+        protected void OnStart()
+        {
+            CurStateEx.OnEnter?.Invoke();
+            CurState.OnEnter();
+        }
+        protected void OnUpdate()
+        {
+            CurStateEx.OnUpdate?.Invoke();
+            CurState.OnUpdate();
+        }
+        protected void OnLateUpdate()
+        {
+            if (onLateEnterDone == false)
+            {
+                onLateEnterDone = true;
+                CurState.OnLateEnter();
+            }
+
+            CurStateEx.OnLateUpdate?.Invoke();
+            CurState.OnLateUpdate();
+        }
+        protected void OnFixedUpdate()
+        {
+            CurStateEx.OnFixedUpdate?.Invoke();
+            CurState.OnFixedUpdate();
+        }
+    }
+    public class GSM_NormalController : GSM_Controller
+    {
+        // Normal GSM Controller for Real-time games
+
+        protected virtual void Start()
+        {
+            OnStart();
+        }
+        protected virtual void Update()
+        {
+            GSM_Update();
+            OnUpdate();
+        }
+        protected virtual void LateUpdate()
+        {
+            OnLateUpdate();
+        }
+        protected virtual void FixedUpdate()
+        {
+            OnFixedUpdate();
         }
     }
 }

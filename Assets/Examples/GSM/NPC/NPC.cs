@@ -1,7 +1,7 @@
 ﻿using Icing;
 using UnityEngine;
 
-public class NPC : GSM_Controller
+public class NPC : GSM_NormalController
 {
     private float targetDist;
     private int health = 5;
@@ -9,7 +9,7 @@ public class NPC : GSM_Controller
     [HideInInspector] public Rigidbody2D rb2D;
     [HideInInspector] public Transform target;
 
-    protected void Awake()
+    private void Awake()
     {
         // Get other things
         gameObject.GetComponent(out rb2D);
