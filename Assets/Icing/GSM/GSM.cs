@@ -67,8 +67,8 @@ namespace Icing
             Bvr Wait();
             Bvr To(Func<bool> condition, Flow flow);
 
-            Flow GetTransition();
             void BvrEnter();
+            Flow GetTransition();
             (StateEx stateEx, GSM_State state)? GetCurState();
         }
         public struct BvrSingle : Bvr
@@ -113,13 +113,13 @@ namespace Icing
                 };
             }
 
+            public void BvrEnter() { }
             public Flow GetTransition()
             {
                 if (transitionFlowCondition != null && transitionFlowCondition())
                     return transitionFlow;
                 return null;
             }
-            public void BvrEnter() { }
             public (StateEx stateEx, GSM_State state)? GetCurState()
             {
                 if (isDone())
@@ -179,16 +179,16 @@ namespace Icing
                 };
             }
 
+            public void BvrEnter()
+            {
+                if (restartOnEnter || curRepeatCount == repeatCount)
+                    curRepeatCount = 0;
+            }
             public Flow GetTransition()
             {
                 if (transitionFlowCondition != null && transitionFlowCondition())
                     return transitionFlow;
                 return null;
-            }
-            public void BvrEnter()
-            {
-                if (restartOnEnter || curRepeatCount == repeatCount)
-                    curRepeatCount = 0;
             }
             public (StateEx stateEx, GSM_State state)? GetCurState()
             {
@@ -248,16 +248,16 @@ namespace Icing
                 };
             }
 
+            public void BvrEnter()
+            {
+                if (restartOnEnter || curIndex == stateList.Length)
+                    curIndex = 0;
+            }
             public Flow GetTransition()
             {
                 if (transitionFlowCondition != null && transitionFlowCondition())
                     return transitionFlow;
                 return null;
-            }
-            public void BvrEnter()
-            {
-                if (restartOnEnter || curIndex == stateList.Length)
-                    curIndex = 0;
             }
             public (StateEx stateEx, GSM_State state)? GetCurState()
             {
@@ -338,22 +338,53 @@ namespace Icing
                 return this;
             }
 
-            public Node GetCurNode(Bvr curBvr)
+            public Node GetCurNode(Flow rightBeforeFlow, Bvr curBvr)
             {
+                (bool nodeFound, Node node) GetNodeNoRecursion(int i)
+                {
+                    if (nodes[i] is BvrNode bvrNode && nodes[i].condition())
+                    {
+                        rightBeforeFlow = null;
+                        return (true, nodes[i]);
+                    }
+                    else if (nodes[i] is FlowNode flowNode)
+                    {
+                        // flow_a.To(true, flow_b)
+                        // flow_b.To(true, flow_a) <- don't check if it came from flow_a
+
+                        if (flowNode.flow == rightBeforeFlow)
+                            return (false, null);
+
+                        if (nodes[i].condition())
+                            return (true, nodes[i]);
+                    }
+
+                    return (false, null);
+                }
+
+                // When current Bvr is Waiting
                 if (curBvr != null && curBvr.IsWait && curBvr.GetCurState() != null)
                 {
                     for (int i = 0; i < nodes.Count; i++)
-                        if (nodes[i].forceRun && nodes[i].condition())
-                            return nodes[i];
-
+                    {
+                        if (nodes[i].forceRun)
+                        {
+                            var (nodeFound, node) = GetNodeNoRecursion(i);
+                            if (nodeFound)
+                                return node;
+                        }
+                    }
                     return waitingNode;
                 }
+                // When current Bvr is not Waiting
                 else
                 {
                     for (int i = 0; i < nodes.Count; i++)
-                        if (nodes[i].condition())
-                            return nodes[i];
-
+                    {
+                        var (nodeFound, node) = GetNodeNoRecursion(i);
+                        if (nodeFound)
+                            return node;
+                    }
                     return null;
                 }
             }
@@ -367,6 +398,7 @@ namespace Icing
         protected GSM_State defaultState;
 
         // GSM Data
+        private Flow rightBeforeFlow;
         private bool onLateEnterDone = false;
 
         public Flow CurFlow { get; private set; }
@@ -409,17 +441,19 @@ namespace Icing
             }
             void ChangeBvr(Bvr newBvr)
             {
-                if (newBvr != CurBvr)
-                {
-                    PrevBvr = CurBvr;
-                    CurBvr = newBvr;
-                    CurBvr.BvrEnter();
-                }
+                if (newBvr == CurBvr)
+                    return;
+
+                PrevBvr = CurBvr;
+                CurBvr = newBvr;
+                CurBvr.BvrEnter();
             }
-            void ChangeFlow(Flow newFlow)
+            bool ChangeFlowRecursive(Flow newFlow)
             {
+                rightBeforeFlow = CurFlow;
                 PrevFlow = CurFlow;
                 CurFlow = newFlow;
+                return ProcessFlowNode(CurFlow);
             }
             bool ProcessBvr(Bvr bvr)
             {
@@ -431,8 +465,9 @@ namespace Icing
                     var transitionFlow = bvr.GetTransition();
                     if (transitionFlow != null)
                     {
-                        ChangeFlow(transitionFlow);
-                        return true;
+                        //ChangeFlow(transitionFlow);
+                        //return true;
+                        return ChangeFlowRecursive(transitionFlow);
                     }
                     return false;
                 }
@@ -445,7 +480,8 @@ namespace Icing
             }
             bool ProcessFlowNode(Flow flowToProcess)
             {
-                var curFlowNode = flowToProcess.GetCurNode(CurBvr);
+                var curFlowNode = flowToProcess.GetCurNode(rightBeforeFlow, CurBvr);
+                rightBeforeFlow = null;
 
                 // When no available node
                 if (curFlowNode == null)
@@ -462,8 +498,9 @@ namespace Icing
                         ChangeBvr(bvrNode.bvr);
                         return ProcessBvr(CurBvr);
                     case Flow.FlowNode flowNode:
-                        ChangeFlow(flowNode.flow);
-                        return true;
+                        //ChangeFlow(flowNode.flow);
+                        //return true;
+                        return ChangeFlowRecursive(flowNode.flow);
                     default:
                         return false;
                 }
