@@ -60,67 +60,84 @@ namespace Icing
 
         #region Bvr
 
-        public interface Bvr
+        public abstract class Bvr
         {
-            bool IsWait { get; }
+            private class BvrID { }
 
-            Bvr Wait();
-            Bvr To(Func<bool> condition, Flow flow);
+            private readonly BvrID bvrID = new BvrID();
+            protected Func<bool> transitionFlowCondition = null;
+            protected Flow transitionFlow = null;
 
-            void BvrEnter();
-            Flow GetTransition();
-            (StateEx stateEx, GSM_State state)? GetCurState();
+            public bool IsWait { get; protected set; } = false;
+
+            public Bvr Wait()
+            {
+                var result = (Bvr)this.MemberwiseClone();
+                result.IsWait = true;
+                return result;
+            }
+            public Bvr To(Func<bool> condition, Flow flow)
+            {
+                var result = (Bvr)this.MemberwiseClone();
+                result.transitionFlowCondition = condition;
+                result.transitionFlow = flow;
+                return result;
+            }
+
+            public virtual void BvrEnter() { }
+            public abstract Flow GetTransition();
+            public abstract (StateEx stateEx, GSM_State state)? GetCurState();
+
+            public static bool operator ==(Bvr lhs, Bvr rhs)
+            {
+                if (lhs is null && rhs is null) return true;
+                if (lhs is null || rhs is null) return false;
+                return lhs.bvrID == rhs.bvrID;
+            }
+            public static bool operator !=(Bvr lhs, Bvr rhs)
+            {
+                if (lhs is null && rhs is null) return false;
+                if (lhs is null || rhs is null) return true;
+                return lhs.bvrID != rhs.bvrID;
+            }
+            public override int GetHashCode()
+            {
+                int hashCode = -385856595;
+                hashCode = hashCode * -1521134295 + EqualityComparer<BvrID>.Default.GetHashCode(bvrID);
+                hashCode = hashCode * -1521134295 + EqualityComparer<Func<bool>>.Default.GetHashCode(transitionFlowCondition);
+                hashCode = hashCode * -1521134295 + EqualityComparer<Flow>.Default.GetHashCode(transitionFlow);
+                hashCode = hashCode * -1521134295 + IsWait.GetHashCode();
+                return hashCode;
+            }
+            public override bool Equals(object obj)
+            {
+                return obj is Bvr bvr &&
+                       EqualityComparer<BvrID>.Default.Equals(bvrID, bvr.bvrID) &&
+                       EqualityComparer<Func<bool>>.Default.Equals(transitionFlowCondition, bvr.transitionFlowCondition) &&
+                       EqualityComparer<Flow>.Default.Equals(transitionFlow, bvr.transitionFlow) &&
+                       IsWait == bvr.IsWait;
+            }
         }
-        public struct BvrSingle : Bvr
+        public class BvrSingle : Bvr
         {
             private readonly StateEx stateEx;
             private readonly GSM_State state;
             private readonly Func<bool> isDone;
-            private Func<bool> transitionFlowCondition;
-            private Flow transitionFlow;
-
-            public bool IsWait { get; private set; }
 
             public BvrSingle(StateEx stateEx, GSM_State state, Func<bool> isDone)
             {
                 this.stateEx = stateEx ?? new StateEx();
                 this.state = state;
                 this.isDone = isDone;
-                this.transitionFlowCondition = null;
-                this.transitionFlow = null;
-                this.IsWait = false;
-            }
-            public BvrSingle(BvrSingle bvr)
-            {
-                this.stateEx = bvr.stateEx;
-                this.state = bvr.state;
-                this.isDone = bvr.isDone;
-                this.transitionFlowCondition = bvr.transitionFlowCondition;
-                this.transitionFlow = bvr.transitionFlow;
-                this.IsWait = bvr.IsWait;
             }
 
-            public Bvr Wait()
-            {
-                return new BvrSingle(this) { IsWait = true };
-            }
-            public Bvr To(Func<bool> condition, Flow flow)
-            {
-                return new BvrSingle(this)
-                {
-                    transitionFlowCondition = condition,
-                    transitionFlow = flow
-                };
-            }
-
-            public void BvrEnter() { }
-            public Flow GetTransition()
+            public override Flow GetTransition()
             {
                 if (transitionFlowCondition != null && transitionFlowCondition())
                     return transitionFlow;
                 return null;
             }
-            public (StateEx stateEx, GSM_State state)? GetCurState()
+            public override (StateEx stateEx, GSM_State state)? GetCurState()
             {
                 if (isDone())
                     return null;
@@ -128,18 +145,14 @@ namespace Icing
                 return (stateEx, state);
             }
         }
-        public struct BvrRepeat : Bvr
+        public class BvrRepeat : Bvr
         {
-            private bool restartOnEnter;
-            private int repeatCount;
+            private readonly bool restartOnEnter;
+            private readonly int repeatCount;
             private int curRepeatCount;
             private readonly StateEx stateEx;
             private readonly GSM_State state;
             private readonly Func<bool> isDone;
-            private Func<bool> transitionFlowCondition;
-            private Flow transitionFlow;
-
-            public bool IsWait { get; private set; }
 
             public BvrRepeat(bool restartOnEnter, int repeatCount, StateEx stateEx, GSM_State state, Func<bool> isDone)
             {
@@ -149,48 +162,20 @@ namespace Icing
                 this.stateEx = stateEx ?? new StateEx();
                 this.state = state;
                 this.isDone = isDone;
-                this.transitionFlowCondition = null;
-                this.transitionFlow = null;
-                this.IsWait = false;
-            }
-            public BvrRepeat(BvrRepeat bvr)
-            {
-                this.restartOnEnter = bvr.restartOnEnter;
-                this.repeatCount = bvr.repeatCount;
-                this.curRepeatCount = bvr.curRepeatCount;
-                this.stateEx = bvr.stateEx;
-                this.state = bvr.state;
-                this.isDone = bvr.isDone;
-                this.transitionFlowCondition = bvr.transitionFlowCondition;
-                this.transitionFlow = bvr.transitionFlow;
-                this.IsWait = bvr.IsWait;
             }
 
-            public Bvr Wait()
-            {
-                return new BvrRepeat(this) { IsWait = true };
-            }
-            public Bvr To(Func<bool> condition, Flow flow)
-            {
-                return new BvrRepeat(this)
-                {
-                    transitionFlowCondition = condition,
-                    transitionFlow = flow
-                };
-            }
-
-            public void BvrEnter()
+            public override void BvrEnter()
             {
                 if (restartOnEnter || curRepeatCount == repeatCount)
                     curRepeatCount = 0;
             }
-            public Flow GetTransition()
+            public override Flow GetTransition()
             {
                 if (transitionFlowCondition != null && transitionFlowCondition())
                     return transitionFlow;
                 return null;
             }
-            public (StateEx stateEx, GSM_State state)? GetCurState()
+            public override (StateEx stateEx, GSM_State state)? GetCurState()
             {
                 if (curRepeatCount == repeatCount)
                     return null;
@@ -204,15 +189,11 @@ namespace Icing
                 return (stateEx, state);
             }
         }
-        public struct BvrSequence : Bvr
+        public class BvrSequence : Bvr
         {
-            private bool restartOnEnter;
+            private readonly bool restartOnEnter;
             private int curIndex;
             private (StateEx stateEx, GSM_State state, Func<bool> isDone)[] stateList;
-            private Func<bool> transitionFlowCondition;
-            private Flow transitionFlow;
-
-            public bool IsWait { get; private set; }
 
             public BvrSequence(bool restartOnEnter, params (StateEx stateEx, GSM_State state, Func<bool> isDone)[] stateList)
             {
@@ -221,45 +202,20 @@ namespace Icing
                 for (int i = 0; i < stateList.Length; i++)
                     stateList[i].stateEx = stateList[i].stateEx ?? new StateEx();
                 this.stateList = stateList;
-                this.transitionFlowCondition = null;
-                this.transitionFlow = null;
-                this.IsWait = false;
-            }
-            public BvrSequence(BvrSequence bvr)
-            {
-                this.restartOnEnter = bvr.restartOnEnter;
-                this.curIndex = bvr.curIndex;
-                this.stateList = bvr.stateList;
-                this.transitionFlowCondition = bvr.transitionFlowCondition;
-                this.transitionFlow = bvr.transitionFlow;
-                this.IsWait = bvr.IsWait;
             }
 
-            public Bvr Wait()
-            {
-                return new BvrSequence(this) { IsWait = true };
-            }
-            public Bvr To(Func<bool> condition, Flow flow)
-            {
-                return new BvrSequence(this)
-                {
-                    transitionFlowCondition = condition,
-                    transitionFlow = flow
-                };
-            }
-
-            public void BvrEnter()
+            public override void BvrEnter()
             {
                 if (restartOnEnter || curIndex == stateList.Length)
                     curIndex = 0;
             }
-            public Flow GetTransition()
+            public override Flow GetTransition()
             {
                 if (transitionFlowCondition != null && transitionFlowCondition())
                     return transitionFlow;
                 return null;
             }
-            public (StateEx stateEx, GSM_State state)? GetCurState()
+            public override (StateEx stateEx, GSM_State state)? GetCurState()
             {
                 if (curIndex == stateList.Length)
                     return null;
@@ -340,26 +296,25 @@ namespace Icing
 
             public Node GetCurNode(Flow rightBeforeFlow, Bvr curBvr)
             {
-                (bool nodeFound, Node node) GetNodeNoRecursion(int i)
+                Node GetNodeAvoidStackOverflow(int i)
                 {
-                    if (nodes[i] is BvrNode bvrNode && nodes[i].condition())
-                    {
-                        rightBeforeFlow = null;
-                        return (true, nodes[i]);
-                    }
-                    else if (nodes[i] is FlowNode flowNode)
-                    {
-                        // flow_a.To(true, flow_b)
-                        // flow_b.To(true, flow_a) <- don't check if it came from flow_a
+                    // flow_a.To(true, flow_b)
+                    // flow_b.To(true, flow_a) <- don't check if it came from flow_a
 
+                    if (nodes[i] is FlowNode flowNode)
+                    {
                         if (flowNode.flow == rightBeforeFlow)
-                            return (false, null);
+                            return null;
 
                         if (nodes[i].condition())
-                            return (true, nodes[i]);
+                            return nodes[i];
+                    }
+                    else if (nodes[i].condition())
+                    {
+                        return nodes[i];
                     }
 
-                    return (false, null);
+                    return null;
                 }
 
                 // When current Bvr is Waiting
@@ -369,8 +324,8 @@ namespace Icing
                     {
                         if (nodes[i].forceRun)
                         {
-                            var (nodeFound, node) = GetNodeNoRecursion(i);
-                            if (nodeFound)
+                            var node = GetNodeAvoidStackOverflow(i);
+                            if (node != null)
                                 return node;
                         }
                     }
@@ -381,8 +336,8 @@ namespace Icing
                 {
                     for (int i = 0; i < nodes.Count; i++)
                     {
-                        var (nodeFound, node) = GetNodeNoRecursion(i);
-                        if (nodeFound)
+                        var node = GetNodeAvoidStackOverflow(i);
+                        if (node != null)
                             return node;
                     }
                     return null;
@@ -412,7 +367,7 @@ namespace Icing
 
         protected void GSM_Init(Flow startingFlow, StateEx defaultStateEx, GSM_State defaultState)
         {
-            // Call this method before Start()
+            // Call this method before OnStart()
             this.CurFlow = startingFlow;
             this.defaultStateEx = CurStateEx = defaultStateEx ?? new StateEx();
             this.defaultState = CurState = defaultState;
@@ -464,11 +419,7 @@ namespace Icing
                 {
                     var transitionFlow = bvr.GetTransition();
                     if (transitionFlow != null)
-                    {
-                        //ChangeFlow(transitionFlow);
-                        //return true;
                         return ChangeFlowRecursive(transitionFlow);
-                    }
                     return false;
                 }
                 // When Bvr is not done
@@ -498,24 +449,15 @@ namespace Icing
                         ChangeBvr(bvrNode.bvr);
                         return ProcessBvr(CurBvr);
                     case Flow.FlowNode flowNode:
-                        //ChangeFlow(flowNode.flow);
-                        //return true;
                         return ChangeFlowRecursive(flowNode.flow);
                     default:
                         return false;
                 }
             }
-
-            // Check begin flow
-            if (!ProcessFlowNode(flow_begin))
-            {
-                // Check current flow
-                if (!ProcessFlowNode(CurFlow))
-                {
-                    // If no bvr is active, then set default state
-                    ChangeState(defaultStateEx, defaultState);
-                }
-            }
+            
+            if (!ProcessFlowNode(flow_begin)) // Check begin flow
+                if (!ProcessFlowNode(CurFlow)) // Check current flow
+                    ChangeState(defaultStateEx, defaultState); // If no Bvr is active, then set to default
         }
 
         protected void OnStart()
@@ -547,7 +489,8 @@ namespace Icing
     }
     public class GSM_NormalController : GSM_Controller
     {
-        // Normal GSM Controller for Real-time games
+        // Normal GSM Controller for Real-time games.
+        // It calls GSM_Update every frame.
 
         protected virtual void Start()
         {
