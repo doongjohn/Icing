@@ -449,6 +449,8 @@ namespace Icing
                 }
             }
 
+            // Remember current frame flow
+            // to avoid stack overflow
             curFrameStartFlow = CurFlow;
 
             // Check begin flow
