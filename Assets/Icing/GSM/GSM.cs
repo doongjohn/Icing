@@ -65,10 +65,10 @@ namespace Icing
             private class BvrID { }
 
             private readonly BvrID bvrID = new BvrID();
-            protected Func<bool> transitionFlowCondition = null;
-            protected Flow transitionFlow = null;
+            private readonly List<(Func<bool> condition, Flow flow)> transitions = 
+                new List<(Func<bool> condition, Flow flow)>();
 
-            public bool IsWait { get; protected set; } = false;
+            public bool IsWait { get; private set; } = false;
 
             public Bvr Wait()
             {
@@ -79,16 +79,19 @@ namespace Icing
             public Bvr To(Func<bool> condition, Flow flow)
             {
                 var result = (Bvr)this.MemberwiseClone();
-                result.transitionFlowCondition = condition;
-                result.transitionFlow = flow;
+                result.transitions.Add((condition, flow));
                 return result;
             }
 
             public virtual void BvrEnter() { }
-            public Flow GetTransition()
+            public Flow GetTransitionFlow(HashSet<Flow> checkedFlows)
             {
-                if (transitionFlowCondition != null && transitionFlowCondition())
-                    return transitionFlow;
+                for (int i = 0; i < transitions.Count; i++)
+                {
+                    // Avoides stack overflow
+                    if (!checkedFlows.Contains(transitions[i].flow) && transitions[i].condition())
+                        return transitions[i].flow;
+                }
                 return null;
             }
             public abstract (StateEx stateEx, GSM_State state)? GetCurState();
@@ -105,22 +108,20 @@ namespace Icing
                 if (lhs is null || rhs is null) return true;
                 return lhs.bvrID != rhs.bvrID;
             }
-            public override int GetHashCode()
-            {
-                int hashCode = -385856595;
-                hashCode = hashCode * -1521134295 + EqualityComparer<BvrID>.Default.GetHashCode(bvrID);
-                hashCode = hashCode * -1521134295 + EqualityComparer<Func<bool>>.Default.GetHashCode(transitionFlowCondition);
-                hashCode = hashCode * -1521134295 + EqualityComparer<Flow>.Default.GetHashCode(transitionFlow);
-                hashCode = hashCode * -1521134295 + IsWait.GetHashCode();
-                return hashCode;
-            }
             public override bool Equals(object obj)
             {
                 return obj is Bvr bvr &&
                        EqualityComparer<BvrID>.Default.Equals(bvrID, bvr.bvrID) &&
-                       EqualityComparer<Func<bool>>.Default.Equals(transitionFlowCondition, bvr.transitionFlowCondition) &&
-                       EqualityComparer<Flow>.Default.Equals(transitionFlow, bvr.transitionFlow) &&
+                       EqualityComparer<List<(Func<bool> condition, Flow flow)>>.Default.Equals(transitions, bvr.transitions) &&
                        IsWait == bvr.IsWait;
+            }
+            public override int GetHashCode()
+            {
+                int hashCode = 1282332479;
+                hashCode = hashCode * -1521134295 + EqualityComparer<BvrID>.Default.GetHashCode(bvrID);
+                hashCode = hashCode * -1521134295 + EqualityComparer<List<(Func<bool> condition, Flow flow)>>.Default.GetHashCode(transitions);
+                hashCode = hashCode * -1521134295 + IsWait.GetHashCode();
+                return hashCode;
             }
         }
         public class BvrSingle : Bvr
@@ -334,8 +335,8 @@ namespace Icing
 
         // GSM Default Data
         protected Flow flow_begin = new Flow();
-        protected StateEx defaultStateEx;
-        protected GSM_State defaultState;
+        private StateEx defaultStateEx;
+        private GSM_State defaultState;
 
         // GSM Data
         private HashSet<Flow> checkedFlows = new HashSet<Flow>();
@@ -391,7 +392,11 @@ namespace Icing
             bool ChangeFlowRecursive(Flow newFlow)
             {
                 // How to avoid stack overflow:
-                // 그냥 한 프레임에 들어갔던 플로우로 다시 가는 건 무시 해야함.
+                // 한 프레임에 들어갔던 플로우로 다시 가는 건 무시 해야함.
+                // flow_a.To(flow_b) -> checkedFlows.Add(flow_a) -> if (!checkedFlows.Contains(flow_b)) -> To flow_b
+                // flow_b.To(flow_c) -> checkedFlows.Add(flow_b) -> if (!checkedFlows.Contains(flow_c)) -> To flow_c
+                // flow_c.To(flow_d) -> checkedFlows.Add(flow_c) -> if (!checkedFlows.Contains(flow_d)) -> To flow_d
+                // flow_d.To(flow_b) -> checkedFlows.Add(flow_d) -> if (!checkedFlows.Contains(flow_b)) -> Infinite loop detected: Stop here
 
                 checkedFlows.Add(CurFlow);
                 PrevFlow = CurFlow;
@@ -405,16 +410,8 @@ namespace Icing
                 // When Bvr is done
                 if (stateData == null)
                 {
-                    var transitionFlow = bvr.GetTransition();
-                    if (transitionFlow != null)
-                    {
-                        // Avoides stack overflow
-                        if (checkedFlows.Contains(transitionFlow))
-                            return false;
-
-                        return ChangeFlowRecursive(transitionFlow);
-                    }
-                    return false;
+                    var transitionFlow = bvr.GetTransitionFlow(checkedFlows);
+                    return transitionFlow != null && ChangeFlowRecursive(transitionFlow);
                 }
                 // When Bvr is not done
                 else
@@ -448,7 +445,7 @@ namespace Icing
                 }
             }
 
-            // Remember current frame flow
+            // Remember current frame flows
             // to avoid stack overflow
             checkedFlows.Clear();
             checkedFlows.Add(CurFlow);
