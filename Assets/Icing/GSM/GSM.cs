@@ -281,14 +281,14 @@ namespace Icing
                 return this;
             }
 
-            public Node GetCurNode(Flow curFrameStartFlow, Bvr curBvr)
+            public Node GetCurNode(HashSet<Flow> checkedFlows, Bvr curBvr)
             {
                 Node GetNodeAvoidStackOverflow(int i)
                 {
                     if (nodes[i] is FlowNode flowNode)
                     {
                         // Avoides stack overflow
-                        if (flowNode.flow == curFrameStartFlow)
+                        if (checkedFlows.Contains(flowNode.flow))
                             return null;
 
                         if (nodes[i].condition())
@@ -338,7 +338,7 @@ namespace Icing
         protected GSM_State defaultState;
 
         // GSM Data
-        private Flow curFrameStartFlow;
+        private HashSet<Flow> checkedFlows = new HashSet<Flow>();
         private bool onLateEnterDone = false;
 
         public Flow CurFlow { get; private set; }
@@ -391,10 +391,9 @@ namespace Icing
             bool ChangeFlowRecursive(Flow newFlow)
             {
                 // How to avoid stack overflow:
-                // start -> flow_a.To(true, flow_b)
-                //          flow_b.To(true, flow_c)
-                //          flow_c.To(true, flow_a) <- don't check if it came from flow_a
+                // 그냥 한 프레임에 들어갔던 플로우로 다시 가는 건 무시 해야함.
 
+                checkedFlows.Add(CurFlow);
                 PrevFlow = CurFlow;
                 CurFlow = newFlow;
                 return ProcessFlowNode(CurFlow);
@@ -410,7 +409,7 @@ namespace Icing
                     if (transitionFlow != null)
                     {
                         // Avoides stack overflow
-                        if (transitionFlow == curFrameStartFlow)
+                        if (checkedFlows.Contains(transitionFlow))
                             return false;
 
                         return ChangeFlowRecursive(transitionFlow);
@@ -426,7 +425,7 @@ namespace Icing
             }
             bool ProcessFlowNode(Flow flowToProcess)
             {
-                var curFlowNode = flowToProcess.GetCurNode(curFrameStartFlow, CurBvr);
+                var curFlowNode = flowToProcess.GetCurNode(checkedFlows, CurBvr);
 
                 // When no available node
                 if (curFlowNode == null)
@@ -451,7 +450,8 @@ namespace Icing
 
             // Remember current frame flow
             // to avoid stack overflow
-            curFrameStartFlow = CurFlow;
+            checkedFlows.Clear();
+            checkedFlows.Add(CurFlow);
 
             // Check begin flow
             if (ProcessFlowNode(flow_begin))
