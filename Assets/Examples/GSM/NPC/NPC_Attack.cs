@@ -19,9 +19,12 @@ public class NPC_Attack : GSM_State
     public override void OnEnter()
     {
         base.OnEnter();
-
         sr.color = attackColor;
-        Defer(() => sr.color = orininalColor);
+    }
+    protected override void OnExit()
+    {
+        base.OnExit();
+        sr.color = orininalColor;
     }
     public override void OnFixedUpdate()
     {
