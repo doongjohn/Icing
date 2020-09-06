@@ -1,4 +1,26 @@
-﻿using System;
+﻿// --------------------------------------------------------
+// GSM: Glorified State Machine
+// --------------------------------------------------------
+// #1. It's a FSM.
+// #2. It may throw Stack overflow if there are *TOO MANY* flow.To() calls in one frame.
+//     (for most cases it will be fine.)
+// #3. StateEx is always executed before GSM_State
+// --------------------------------------------------------
+// GSM_State
+// --------------------------------------------------------
+// #1. It's a MonoBehaviour.
+// #2. OnExit()
+//     -> Runs once when exiting this state.
+// #3. OnEnter() 
+//     -> Runs once when entering this state.
+// #4. OnLateEnter() 
+//     -> Same as OnEnter() but runs inside LateUpdate()
+// #5. OnUpdate(), OnLateUpdate(), OnFixedUpdate(), 
+//     -> Same as MonoBehaviour Update(), LateUpdate(), FixedUpdate(). 
+//        But only runs when this state is active.
+
+
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
