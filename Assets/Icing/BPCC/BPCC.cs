@@ -143,6 +143,10 @@ namespace Icing
             groundLayer = LayerMaskHelper.Create(solidLayer, oneWayLayer);
             hitArray = new RaycastHit2D[maxDetectCount];
             prevPos = tf.position;
+
+            // TODO:
+            // Set up one way collider surface arc
+            // depending on maxWalkAngle
         }
 
         public void ApplyInnerGap()
@@ -152,20 +156,12 @@ namespace Icing
             // Solid Collider
             bodyData.collider.size = bodyData.colliderSize.Add(y: -innerGap);
             bodyData.collider.offset = new Vector2(0, innerGap * 0.5f);
-
-            // One Way Collider
-            bodyData.oneWayCollider.size = bodyData.collider.size;
-            bodyData.oneWayCollider.offset = bodyData.collider.offset;
         }
         public void ResetInnerGap()
         {
             // Solid Collider
             bodyData.collider.size = bodyData.colliderSize;
             bodyData.collider.offset = Vector2.zero;
-
-            // One Way Collider
-            bodyData.oneWayCollider.size = bodyData.collider.size;
-            bodyData.oneWayCollider.offset = bodyData.collider.offset;
         }
 
         public void ResetData()
@@ -485,7 +481,7 @@ namespace Icing
         private int inputDir = 0;
         private int moveDir = 0;
         private float curWalkSpeed;
-        private BPCC_BodyData bodyData;
+        private BPCC_BodyData bodyData; // unused?
 
         public CountedBool CanWalk = new CountedBool();
 
