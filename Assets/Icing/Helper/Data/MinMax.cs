@@ -39,7 +39,6 @@ namespace Icing
             }
         }
 
-
         public IntMinMax(int value, int min = int.MinValue, int max = int.MaxValue)
         {
             recalc = true;
@@ -85,7 +84,6 @@ namespace Icing
             }
         }
 
-
         public FloatMinMax(float value, float min = float.NegativeInfinity, float max = float.PositiveInfinity)
         {
             recalc = true;
@@ -123,7 +121,6 @@ namespace Icing
             }
         }
 
-
         public Int0Max(int value, int max = int.MaxValue)
         {
             recalc = true;
@@ -158,7 +155,6 @@ namespace Icing
                 recalc = true;
             }
         }
-
 
         public Float0Max(float value, float max = float.PositiveInfinity)
         {

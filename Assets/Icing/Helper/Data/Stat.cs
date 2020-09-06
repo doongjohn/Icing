@@ -59,7 +59,7 @@ namespace Icing
                 recalc = true;
             }
         }
-        public FloatMinMax ModPercent // 퍼센트로 증감함. 예) ModPercent = 100 -> BaseValue 100%(2배) 증가
+        public FloatMinMax ModPercent // 퍼센트로 증감함. 예) ModPercent = 100 -> BaseValue의 100%(2배)
         {
             get => modPercent;
             set
