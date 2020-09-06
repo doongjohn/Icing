@@ -11,7 +11,6 @@ namespace Icing
         FixedUpdate,
         Manual
     }
-
     public interface ITimer
     {
         GameObject Owner { get; }
@@ -21,9 +20,9 @@ namespace Icing
         where T : TimerBase<T>
     {
         protected TimerTickMode tickMode;
-        protected Action onStart;
-        protected Action onTick;
-        protected Action onEnd;
+        protected Action onStart = null;
+        protected Action onTick = null;
+        protected Action onEnd = null;
         protected float curTime = 0f;
 
         public GameObject Owner
@@ -57,14 +56,7 @@ namespace Icing
             TimerManager.Inst.RemoveTimer(this, this.tickMode);
             TimerManager.Inst.AddTimer(this, tickMode);
             this.tickMode = tickMode;
-            return this as T;
-        }
-        public T SetAction(Action onStart = null, Action onTick = null, Action onEnd = null)
-        {
-            this.onStart = onStart;
-            this.onTick = onTick;
-            this.onEnd = onEnd;
-            return this as T;
+            return (T)this;
         }
         public T SetActive(bool active)
         {
@@ -78,20 +70,37 @@ namespace Icing
             else
                 TimerManager.Inst.AddTimer(this, tickMode);
 
-            return this as T;
+            return (T)this;
         }
+        public T OnStart(Action onStart)
+        {
+            this.onStart = onStart;
+            return (T)this;
+        }
+        public T OnTick(Action onTick)
+        {
+            this.onTick = onTick;
+            return (T)this;
+        }
+        public T OnEnd(Action onEnd)
+        {
+            this.onEnd = onEnd;
+            return (T)this;
+        }
+
         public T Reset()
         {
             CurTime = 0;
             IsEnded = false;
-            return this as T;
+            return (T)this;
         }
         public T ToEnd()
         {
             CurTime = GetEndTime;
             IsEnded = true;
-            return this as T;
+            return (T)this;
         }
+
         void ITimer.Tick(float deltaTime)
         {
             if (!IsActive || IsEnded)
@@ -121,6 +130,7 @@ namespace Icing
         public Timer(GameObject owner, TimerTickMode tickMode = TimerTickMode.LateUpdate)
             : base(owner, tickMode) { }
     }
+
     public class TimerStat : TimerBase<TimerStat>
     {
         public FloatStat EndTime;
