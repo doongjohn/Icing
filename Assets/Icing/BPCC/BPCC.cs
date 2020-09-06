@@ -46,7 +46,7 @@ namespace Icing
         public float maxFallSpeed;
         public float value;
         public BPCC_BodyData bodyData;
-        public BoolCount UseGravity = new BoolCount();
+        public CountedBool UseGravity = new CountedBool();
 
         public void Init(
             BPCC_BodyData bodyData,
@@ -170,12 +170,13 @@ namespace Icing
 
         public void ResetData()
         {
-            OnGround = false;
-            OnSteepSlope = false;
+            prevPos = tf.position;
+            Array.Clear(hitArray, 0, hitArray.Length);
+            groundData.Reset();
             slideDownVector = Vector2.zero;
 
-            groundData.Reset();
-            Array.Clear(hitArray, 0, hitArray.Length);
+            OnGround = false;
+            OnSteepSlope = false;
 
             ResetInnerGap();
         }
@@ -185,7 +186,7 @@ namespace Icing
             // 1. 속도가 너무 빠르면 이상한 결과가 나올 수 있다.
 
             // FIXME:
-            // 1. 벽이 진행 방향의 위에 있으면 innerGap 만큼 천장을 무시함.
+            // 1. innerGap 만큼 천장을 무시함.
             //    (흠... 어떻게 고치지...)
 
             // TODO:
@@ -195,7 +196,7 @@ namespace Icing
             if (!detectCondition)
             {
                 ResetData();
-                goto END;
+                return;
             }
 
             ApplyInnerGap();
@@ -323,9 +324,9 @@ namespace Icing
             // 평평한 땅 위에 있는 것과 같은 걸로 처리하기 위함.
             if (finalHitData.collider != null && finalHitData.normal.y != 0 && finalHitData.normal.y > 0)
             {
-                var hitR = Physics2D.Raycast(pos.Add(x: halfSize.x), Vector2.down, halfSize.y, groundLayer);
-                var hitL = Physics2D.Raycast(pos.Add(x: -halfSize.x), Vector2.down, halfSize.y, groundLayer);
-                inValley = hitR.collider != null && hitL.collider != null;
+                inValley =
+                    Physics2D.Raycast(pos.Add(x: halfSize.x), Vector2.down, halfSize.y, groundLayer).collider != null && 
+                    Physics2D.Raycast(pos.Add(x: -halfSize.x), Vector2.down, halfSize.y, groundLayer).collider != null;
             }
 
             #endregion
@@ -396,7 +397,6 @@ namespace Icing
 
             #endregion
 
-        END:
             // Update Previous Position
             prevPos = tf.position;
         }
@@ -475,12 +475,19 @@ namespace Icing
     [Serializable]
     public class BPCC_Walk
     {
-        [SerializeField] private float walkSpeed;
+        [SerializeField] private float maxSpeed;
+        [SerializeField] private float minSpeed;
+        [SerializeField] private float accel;
+        [SerializeField] private float decel;
+        [SerializeField, Range(0, 1)]
+        private float changeDirPreserveSpeed;
 
         private int inputDir = 0;
+        private int moveDir = 0;
+        private float curWalkSpeed;
         private BPCC_BodyData bodyData;
 
-        public BoolCount CanWalk = new BoolCount();
+        public CountedBool CanWalk = new CountedBool();
 
         public bool IsWalking
         { get; private set; } = false;
@@ -493,7 +500,7 @@ namespace Icing
         public void Init(BPCC_BodyData bodyData, float walkSpeed, bool canWalk = true)
         {
             this.bodyData = bodyData;
-            this.walkSpeed = walkSpeed;
+            this.maxSpeed = walkSpeed;
             CanWalk.Set(canWalk);
         }
 
@@ -519,28 +526,38 @@ namespace Icing
         {
             if (inputDir != 0)
             {
-                if (groundData.collider == null || (groundData.normal.HasValue && groundData.normal.Value == Vector2.up))
-                {
-                    WalkDir = Vector2.right * inputDir;
-                }
-                else
-                {
-                    Vector3 crossDir;
-                    if (inputDir == 1)
-                        crossDir = Vector3.back;
-                    else
-                        crossDir = Vector3.forward;
-                    WalkDir = Vector3.Cross(crossDir, groundData.normal.Value).normalized;
-                }
+                if (moveDir != inputDir)
+                    curWalkSpeed *= changeDirPreserveSpeed;
+
+                moveDir = inputDir;
+            }
+
+            if (groundData.collider == null || (groundData.normal.HasValue && groundData.normal.Value == Vector2.up))
+            {
+                WalkDir = Vector2.right * moveDir;
             }
             else
             {
-                WalkDir = WalkVector = Vector2.zero;
+                Vector3 crossDir;
+                if (moveDir == 1)
+                    crossDir = Vector3.back;
+                else
+                    crossDir = Vector3.forward;
+                WalkDir = Vector3.Cross(crossDir, groundData.normal.Value).normalized;
             }
 
-            // TODO:
-            // Do accel, decel, etc... calculation here
-            WalkVector = WalkDir * walkSpeed;
+            if (inputDir != 0)
+            {
+                curWalkSpeed += accel * Time.deltaTime;
+                curWalkSpeed = Mathf.Clamp(curWalkSpeed, minSpeed, maxSpeed);
+            }
+            else
+            {
+                curWalkSpeed -= decel * Time.deltaTime;
+                curWalkSpeed = Mathf.Max(curWalkSpeed, 0);
+            }
+
+            WalkVector = WalkDir * curWalkSpeed;
         }
     }
 
@@ -554,7 +571,7 @@ namespace Icing
         private float? startPosY = null;
         private float? jumpVelocity = null;
 
-        public BoolCount CanJump = new BoolCount();
+        public CountedBool CanJump = new CountedBool();
         public int airJumpCount;
         public int curAirJumpCount;
 
