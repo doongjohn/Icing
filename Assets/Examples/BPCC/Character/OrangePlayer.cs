@@ -19,9 +19,9 @@ public class OrangePlayer : MonoBehaviour
     private void Awake()
     {
         bodyData.Init(
-            transform:      transform,
-            rb2D:           GetComponent<Rigidbody2D>(),
-            collider:       GetComponent<BoxCollider2D>(),
+            transform     : transform,
+            rb2D          : GetComponent<Rigidbody2D>(),
+            collider      : GetComponent<BoxCollider2D>(),
             oneWayCollider: transform.GetChild(0).GetComponent<BoxCollider2D>()
         );
         gravity.Init(
@@ -32,9 +32,9 @@ public class OrangePlayer : MonoBehaviour
         groundDetection.Init(
             bodyData,
             maxDetectCount: 50,
-            maxWalkAngle:   89,
-            snapLength:     0.1f,
-            innerGap:       0.1f
+            maxWalkAngle  : 89,
+            snapLength    : 0.1f,
+            innerGap      : 0.1f
         );
         walk.Init(
             bodyData,
@@ -128,13 +128,13 @@ public class OrangePlayer : MonoBehaviour
 
             // Note:
             // In order to snap to the ground correctly
-            // DetectGround method needs to run after internal physics update.
+            // DetectGround() method needs to run after internal physics update.
 
             // Detect Ground
             groundDetection.DetectGround(
                 detectCondition: !jump.IsJumping,
-                slideAccel:      gravity.gravityAccel,
-                maxSlideSpeed:   gravity.maxFallSpeed);
+                slideAccel     : gravity.gravityAccel,
+                maxSlideSpeed  : gravity.maxFallSpeed);
         }
     }
 }

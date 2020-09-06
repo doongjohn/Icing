@@ -123,6 +123,7 @@ SpriteRenderer:
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -269,7 +270,11 @@ MonoBehaviour:
       m_Bits: 512
     slideDownVector: {x: 0, y: 0}
   walk:
-    walkSpeed: 0
+    maxSpeed: 15
+    minSpeed: 3
+    accel: 20
+    decel: 50
+    changeDirPreserveSpeed: 0.5
   jump:
     jumpCurve:
       curve:
