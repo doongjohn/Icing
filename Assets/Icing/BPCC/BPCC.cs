@@ -105,7 +105,7 @@ namespace Icing
         private Vector2 prevPos;
         private LayerMask groundLayer;
         private RaycastHit2D[] hitArray;
-        private List<Collider2D> ignoreGrounds = new List<Collider2D>();
+        private HashSet<Collider2D> ignoreGrounds = new HashSet<Collider2D>();
         private BPCC_GroundData groundData;
         private bool inputFallThrough = false;
 
@@ -152,16 +152,13 @@ namespace Icing
         public void ApplyInnerGap()
         {
             float innerGap = this.innerGap / tf.lossyScale.y;
-
-            // Solid Collider
-            bodyData.collider.size = bodyData.colliderSize.Add(y: -innerGap);
-            bodyData.collider.offset = new Vector2(0, innerGap * 0.5f);
+            bodyData.collider.size   = bodyData.oneWayCollider.size   = bodyData.colliderSize.Add(y: -innerGap);
+            bodyData.collider.offset = bodyData.oneWayCollider.offset = new Vector2(0, innerGap * 0.5f);
         }
         public void ResetInnerGap()
         {
-            // Solid Collider
-            bodyData.collider.size = bodyData.colliderSize;
-            bodyData.collider.offset = Vector2.zero;
+            bodyData.collider.size   = bodyData.oneWayCollider.size   = bodyData.colliderSize;
+            bodyData.collider.offset = bodyData.oneWayCollider.offset = Vector2.zero;
         }
 
         public void ResetData()
@@ -320,9 +317,12 @@ namespace Icing
             // 평평한 땅 위에 있는 것과 같은 걸로 처리하기 위함.
             if (finalHitData.collider != null && finalHitData.normal.y != 0 && finalHitData.normal.y > 0)
             {
-                inValley =
-                    Physics2D.Raycast(pos.Add(x: halfSize.x), Vector2.down, halfSize.y, groundLayer).collider != null && 
-                    Physics2D.Raycast(pos.Add(x: -halfSize.x), Vector2.down, halfSize.y, groundLayer).collider != null;
+                var colR = Physics2D.Raycast(pos.Add(x: halfSize.x), Vector2.down, halfSize.y, groundLayer).collider;
+                var colL = Physics2D.Raycast(pos.Add(x: -halfSize.x), Vector2.down, halfSize.y, groundLayer).collider;
+
+                inValley = 
+                    colR != null && !ignoreGrounds.Contains(colR) && 
+                    colL != null && !ignoreGrounds.Contains(colL);
             }
 
             #endregion
@@ -404,13 +404,12 @@ namespace Icing
         }
         public void FallThrough()
         {
-            // NOTE:
-            // 1. 경사를 내려가고 있을 때는 내려가면서 플랫폼이 다시
-            //    인식되어서 플랫폼을 뚫고 내려가지지 않음.
+            // FIXME:
+            // 1. 단방향 플랫폼이 진행 바향에 있고 플레이어와 겹쳐 있으면 그 위로 올라가려고 함.
 
-            #region Overlap Box
+            #region Full Overlap Box
 
-            Collider2D[] overlaps =
+            Collider2D[] fullOverlap =
                 Physics2D.OverlapBoxAll(
                     tf.position,
                     bodyData.Size,
@@ -421,23 +420,21 @@ namespace Icing
 
             #region Enable Collsion
 
-            if (overlaps != null && ignoreGrounds.Count != 0)
+            if (fullOverlap.Length != 0)
             {
-                for (int i = ignoreGrounds.Count - 1; i >= 0; i--)
+                for (int i = 0; i < fullOverlap.Length; i++)
                 {
-                    if (Array.Exists(overlaps, col => col == ignoreGrounds[i])) continue;
+                    if (ignoreGrounds.Contains(fullOverlap[i]))
+                        continue;
 
-                    Physics2D.IgnoreCollision(bodyData.oneWayCollider, ignoreGrounds[i], false);
-                    ignoreGrounds.Remove(ignoreGrounds[i]);
+                    Physics2D.IgnoreCollision(bodyData.oneWayCollider, fullOverlap[i], false);
+                    ignoreGrounds.Remove(fullOverlap[i]);
                 }
             }
             else
             {
-                if (overlaps != null)
-                {
-                    for (int i = 0; i < ignoreGrounds.Count; i++)
-                        Physics2D.IgnoreCollision(bodyData.oneWayCollider, ignoreGrounds[i], false);
-                }
+                foreach (var item in ignoreGrounds)
+                    Physics2D.IgnoreCollision(bodyData.oneWayCollider, item, false);
                 ignoreGrounds.Clear();
             }
 
@@ -450,18 +447,16 @@ namespace Icing
 
             inputFallThrough = false;
 
-            if (overlaps == null)
-                return;
             if (!OnGround)
                 return;
 
-            for (int i = 0; i < overlaps.Length; i++)
+            for (int i = 0; i < fullOverlap.Length; i++)
             {
-                if (ignoreGrounds.Contains(overlaps[i]))
+                if (ignoreGrounds.Contains(fullOverlap[i]))
                     continue;
 
-                Physics2D.IgnoreCollision(bodyData.oneWayCollider, overlaps[i], true);
-                ignoreGrounds.Add(overlaps[i]);
+                Physics2D.IgnoreCollision(bodyData.oneWayCollider, fullOverlap[i], true);
+                ignoreGrounds.Add(fullOverlap[i]);
             }
 
             #endregion
@@ -481,22 +476,29 @@ namespace Icing
         private int inputDir = 0;
         private int moveDir = 0;
         private float curWalkSpeed;
-        private BPCC_BodyData bodyData; // unused?
 
         public CountedBool CanWalk = new CountedBool();
 
-        public bool IsWalking
-        { get; private set; } = false;
         public int InputDir => inputDir;
         public Vector2 WalkDir
         { get; private set; } = Vector2.zero;
         public Vector2 WalkVector
         { get; private set; } = Vector2.zero;
+        public int MoveDir => moveDir;
 
-        public void Init(BPCC_BodyData bodyData, float walkSpeed, bool canWalk = true)
+        public void Init(
+            float maxSpeed,
+            float minSpeed,
+            float accel,
+            float decel,
+            float changeDirPreserveSpeed,
+            bool canWalk = true)
         {
-            this.bodyData = bodyData;
-            this.maxSpeed = walkSpeed;
+            this.maxSpeed = maxSpeed;
+            this.minSpeed = minSpeed;
+            this.accel = accel;
+            this.decel = decel;
+            this.changeDirPreserveSpeed = changeDirPreserveSpeed;
             CanWalk.Set(canWalk);
         }
 
@@ -573,6 +575,7 @@ namespace Icing
 
         public bool IsJumping
         { get; private set; } = false;
+        public MovementCurve JumpCurve => jumpCurve;
         public bool InputPressed => inputPressed;
         public float? JumpVelocity => jumpVelocity;
         public bool CanAirJump => curAirJumpCount < airJumpCount;

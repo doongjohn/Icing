@@ -16,6 +16,10 @@ public class OrangePlayer : MonoBehaviour
     private Vector2 controlVector;
     private Vector2 externalVector;
 
+    // Visual
+    private Animator animator;
+    private SpriteRenderer sr;
+
     private void Awake()
     {
         bodyData.Init(
@@ -37,8 +41,11 @@ public class OrangePlayer : MonoBehaviour
             innerGap      : 0.1f
         );
         walk.Init(
-            bodyData,
-            walkSpeed: 15
+            maxSpeed: 7,
+            minSpeed: 3f,
+            accel: 20,
+            decel: 50,
+            changeDirPreserveSpeed: 0.5f
         );
         jump.Init(
             bodyData,
@@ -46,12 +53,23 @@ public class OrangePlayer : MonoBehaviour
         );
 
         StartCoroutine(LateFixedUpdate());
+
+        // Get Visual
+        gameObject.GetComponent(out animator);
+        transform.GetChild(1).gameObject.GetComponent(out sr);
     }
     private void Update()
     {
         groundDetection.GetInput_FallThrough(KeyCode.S);
         walk.GetInput(KeyCode.D, KeyCode.A);
         jump.GetInput(KeyCode.Space);
+    }
+    private void LateUpdate()
+    {
+        if (jump.IsJumping)
+        {
+            animator.SetDuration(jump.JumpCurve.EndTime, "Jump");
+        }
     }
     private void FixedUpdate()
     {
@@ -89,10 +107,6 @@ public class OrangePlayer : MonoBehaviour
             }
         }
 
-        // Reset Jump Input
-        if (jump.InputPressed)
-            jump.ResetInput();
-
         // Apply Jump Velocity
         if (jump.IsJumping)
         {
@@ -110,8 +124,37 @@ public class OrangePlayer : MonoBehaviour
         else
         {
             walk.CalcWalkVector(groundDetection.GroundData);
+            sr.flipX = walk.MoveDir != 1;
             controlVector += walk.WalkVector;
         }
+
+        // Animation
+        if (jump.IsJumping)
+        {
+            if (jump.InputPressed)
+                animator.Play("Jump", 0, 0);
+            else
+                animator.Play("Jump");
+        }
+        else
+        {
+            animator.ResetSpeed();
+            if (groundDetection.OnGround)
+            {
+                if (walk.InputDir != 0)
+                    animator.Play("Walk");
+                else
+                    animator.Play("Idle");
+            }
+            else
+            {
+                animator.Play("Airborne");
+            }
+        }
+
+        // Reset Jump Input
+        if (jump.InputPressed)
+            jump.ResetInput();
 
         // Apply Velocity
         bodyData.rb2D.velocity = controlVector + externalVector;
