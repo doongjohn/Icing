@@ -1,9 +1,8 @@
 ﻿using Icing;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class OrangePlayer : MonoBehaviour
+public class PinkPlayer : MonoBehaviour
 {
     // Character Data
     private BPCC_BodyData bodyData = new BPCC_BodyData();
@@ -52,6 +51,7 @@ public class OrangePlayer : MonoBehaviour
             airJumpCount: 1
         );
 
+        // Late Fixed Update
         StartCoroutine(LateFixedUpdate());
 
         // Get Visual
@@ -124,11 +124,13 @@ public class OrangePlayer : MonoBehaviour
         else
         {
             walk.CalcWalkVector(groundDetection.GroundData);
-            sr.flipX = walk.MoveDir != 1;
             controlVector += walk.WalkVector;
+
+            // Flip Sprite
+            sr.flipX = walk.MoveDir != 1;
         }
 
-        // Animation
+        // Animation and Visual
         if (jump.IsJumping)
         {
             if (jump.InputPressed)

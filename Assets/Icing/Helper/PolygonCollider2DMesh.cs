@@ -6,24 +6,24 @@
 [ExecuteInEditMode]
 public class PolygonCollider2DMesh : MonoBehaviour
 {
-    private PolygonCollider2D pc2;
+    private PolygonCollider2D pc2D;
     private MeshFilter mf;
     private Mesh mesh;
 
 #if UNITY_EDITOR
     private void Awake()
     {
-        pc2 = gameObject.GetComponent<PolygonCollider2D>();
+        pc2D = gameObject.GetComponent<PolygonCollider2D>();
         mf = GetComponent<MeshFilter>();
         mesh = new Mesh();
     }
     void Update()
     {
-        if (Application.isPlaying || pc2 == null)
+        if (Application.isPlaying || pc2D == null)
             return;
 
-        int pointCount = pc2.GetTotalPointCount();
-        Vector2[] points = pc2.points;
+        int pointCount = pc2D.GetTotalPointCount();
+        Vector2[] points = pc2D.points;
         Vector3[] vertices = new Vector3[pointCount];
         Vector2[] uv = new Vector2[pointCount];
         for (int j = 0; j < pointCount; j++)
