@@ -227,7 +227,7 @@ namespace Icing
                     // NOTE:
                     // 떨어질 때 단방향 플랫폼 검사 안함.
                     // FIXME:
-                    // 1. 아니 어떻게 하지....
+                    // 1. 빠르게 움직이면 단방향 플랫폼을 뚫고 가네...
                     if (oneWayLayer.ContainsLayer(hitArray[i].collider.gameObject.layer))
                     {
                         if (hitArray[i].point.y > pos.y - halfSize.y + innerGap)
@@ -404,9 +404,6 @@ namespace Icing
         }
         public void FallThrough()
         {
-            // FIXME:
-            // 1. 단방향 플랫폼이 진행 바향에 있고 플레이어와 겹쳐 있으면 그 위로 올라가려고 함.
-
             #region Full Overlap Box
 
             Collider2D[] fullOverlap =

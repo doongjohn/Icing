@@ -356,12 +356,12 @@ namespace Icing
         #endregion
 
         // GSM Default Data
-        protected Flow flow_begin = new Flow();
+        protected readonly Flow flow_begin = new Flow();
         private StateEx defaultStateEx;
         private GSM_State defaultState;
 
         // GSM Data
-        private HashSet<Flow> checkedFlows = new HashSet<Flow>();
+        private readonly HashSet<Flow> checkedFlows = new HashSet<Flow>();
         private bool onLateEnterDone = false;
 
         public Flow CurFlow { get; private set; }
