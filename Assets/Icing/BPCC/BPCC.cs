@@ -270,7 +270,7 @@ namespace Icing
                 RaycastHit2D hitData = GetHighestGround(
                     new BoxCastData()
                     {
-                        pos = pos.Add(y: -downDist * 0.5f),
+                        pos = pos.Add(y: downDist * 0.5f),
                         size = size.Add(y: downDist),
                         dir = Vector2.left * prevVector.x,
                         dist = prevDistX + contactOffset
@@ -287,6 +287,7 @@ namespace Icing
             }
             void GetGround_Cross()
             {
+                // when shooting off from the peak of the slope
                 RaycastHit2D hitData = GetHighestGround(
                     new BoxCastData()
                     {
