@@ -143,7 +143,7 @@ public class PinkPlayer : MonoBehaviour
             animator.ResetSpeed();
             if (groundDetection.OnGround)
             {
-                if (walk.InputDir != 0)
+                if (walk.InputDir != 0 && groundDetection.slideDownVector == Vector2.zero)
                     animator.Play("Walk");
                 else
                     animator.Play("Idle");
