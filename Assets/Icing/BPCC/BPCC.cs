@@ -150,7 +150,7 @@ namespace Icing
         public void ApplyInnerGap()
         {
             float innerGap = this.innerGap / bodyData.transform.lossyScale.y;
-            bodyData.collider.size   = bodyData.oneWayCollider.size   = bodyData.colliderSize.Add(y: -innerGap);
+            bodyData.collider.size = bodyData.oneWayCollider.size = bodyData.colliderSize.Add(y: -innerGap);
             bodyData.collider.offset = bodyData.oneWayCollider.offset = new Vector2(0, innerGap * 0.5f);
         }
         public void ResetInnerGap()
@@ -329,8 +329,9 @@ namespace Icing
             if (OnGround && finalHitData.collider == null && prevVector.y > 0)
                 GetGround_Cross();
 
-            // \┗┛/
-            //  \/
+            // \    /
+            //  \┗┛/
+            //   \/
             // if the character is touching both slopes (in a valley)
             // set the ground normal to Vector2.up
             if (finalHitData.collider != null && finalHitData.normal.y != 0 && finalHitData.normal.y > 0)
