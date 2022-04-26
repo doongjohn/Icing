@@ -19,6 +19,12 @@ public class PinkPlayer : MonoBehaviour
     private Animator animator;
     private SpriteRenderer sr;
 
+    private void OnValidate()
+    {
+        if (groundDetection != null && groundDetection.bodyData != null)
+            groundDetection?.ApplyInnerGap();
+    }
+
     private void Awake()
     {
         bodyData.Init(
@@ -68,11 +74,21 @@ public class PinkPlayer : MonoBehaviour
             animator.ResetSpeed();
             if (groundDetection.OnGround)
             {
-               animator.Play(
-                   walk.InputDir != 0 && groundDetection.slideDownVector == Vector2.zero 
-                   ? "Walk" 
-                   : "Idle"
-                );
+                if (walk.InputDir == 0 || groundDetection.slideDownVector != Vector2.zero)
+                {
+                    animator.Play("Idle");
+                } 
+                else if (walk.InputDir != 0)
+                {
+                    if (walk.curWalkSpeed <= walk.maxSpeed * 0.6)
+                    {
+                        animator.Play("Walk");
+                    }
+                    else
+                    {
+                        animator.Play("Run");
+                    }
+                }
             }
             else
             {

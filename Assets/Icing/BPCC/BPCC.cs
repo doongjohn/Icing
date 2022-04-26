@@ -98,7 +98,7 @@ namespace Icing
         [SerializeField, Range(0, int.MaxValue)] 
         private float innerGap = 0.1f;
         
-        [SerializeField] private BPCC_BodyData bodyData;
+        [HideInInspector] public BPCC_BodyData bodyData;
         [SerializeField] private LayerMask solidLayer;
         [SerializeField] private LayerMask oneWayLayer;
 
@@ -721,16 +721,16 @@ namespace Icing
     public class BPCC_Walk
     {
         public CountedBool CanWalk = new();
-        [SerializeField] private float maxSpeed;
-        [SerializeField] private float minSpeed;
-        [SerializeField] private float accel;
-        [SerializeField] private float decel;
+        [SerializeField] public float maxSpeed;
+        [SerializeField] public float minSpeed;
+        [SerializeField] public float accel;
+        [SerializeField] public float decel;
         [SerializeField, Range(0, 1)]
         private float changeDirPreserveSpeed;
 
         private int inputDir = 0;
         private int moveDir = 0;
-        private float curWalkSpeed;
+        [HideInInspector] public float curWalkSpeed;
 
 
         public int InputDir => inputDir;

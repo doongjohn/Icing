@@ -296,10 +296,11 @@ MonoBehaviour:
     slideDownVector: {x: 0, y: 0}
   walk:
     maxSpeed: 15
-    minSpeed: 5
+    minSpeed: 3
     accel: 20
     decel: 70
     changeDirPreserveSpeed: 0.5
+    curWalkSpeed: 0
   jump:
     jumpCurve:
       curve:
