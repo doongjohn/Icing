@@ -7,7 +7,7 @@ namespace Icing
     public class MovementCurve
     {
         public AnimationCurve curve;
-        public float curTime;
+        [HideInInspector] public float curTime;
 
         public float Value => curve.Evaluate(curTime);
         public float EndTime => curve.keys[curve.length - 1].time;

@@ -67,10 +67,10 @@ namespace Icing
             vec.y += amount;
             return vec;
         }
-        public static Vector2 Add(this Vector2 vec, float? x = null, float? y = null)
+        public static Vector2 Add(this Vector2 vec, float x = 0, float y = 0)
         {
-            if (x.HasValue) vec.x += x.Value;
-            if (y.HasValue) vec.y += y.Value;
+            vec.x += x;
+            vec.y += y;
             return vec;
         }
         public static Vector3 Add(this Vector3 vec, float amount)
@@ -80,39 +80,39 @@ namespace Icing
             vec.z += amount;
             return vec;
         }
-        public static Vector3 Add(this Vector3 vec, float? x = null, float? y = null, float? z = null)
+        public static Vector3 Add(this Vector3 vec, float x = 0, float y = 0, float z = 0)
         {
-            if (x.HasValue) vec.x += x.Value;
-            if (y.HasValue) vec.y += y.Value;
-            if (z.HasValue) vec.z += z.Value;
+            vec.x += x;
+            vec.y += y;
+            vec.z += z;
             return vec;
         }
 
-        public static Vector2 Mul(this Vector2 vec, float? x = null, float? y = null)
+        public static Vector2 Mul(this Vector2 vec, float x = 1, float y = 1)
         {
-            if (x.HasValue) vec.x *= x.Value;
-            if (y.HasValue) vec.y *= y.Value;
+            vec.x *= x;
+            vec.y *= y;
             return vec;
         }
-        public static Vector2 Mul(this Vector3 vec, float? x = null, float? y = null, float? z = null)
+        public static Vector2 Mul(this Vector3 vec, float x = 1, float y = 1, float z = 1)
         {
-            if (x.HasValue) vec.x *= x.Value;
-            if (y.HasValue) vec.y *= y.Value;
-            if (z.HasValue) vec.z *= z.Value;
+            vec.x *= x;
+            vec.y *= y;
+            vec.z *= z;
             return vec;
         }
 
-        public static Vector2 Div(this Vector2 vec, float? x = null, float? y = null)
+        public static Vector2 Div(this Vector2 vec, float x = 1, float y = 1)
         {
-            if (x.HasValue) vec.x /= x.Value;
-            if (y.HasValue) vec.y /= y.Value;
+             vec.x /= x;
+             vec.y /= y;
             return vec;
         }
-        public static Vector2 Div(this Vector3 vec, float? x = null, float? y = null, float? z = null)
+        public static Vector2 Div(this Vector3 vec, float x = 1, float y = 1, float z = 1)
         {
-            if (x.HasValue) vec.x /= x.Value;
-            if (y.HasValue) vec.y /= y.Value;
-            if (z.HasValue) vec.z /= z.Value;
+            vec.x /= x;
+            vec.y /= y;
+            vec.z /= z;
             return vec;
         }
 
@@ -217,18 +217,14 @@ namespace Icing
         {
             LayerMask result = 0;
             foreach (var name in layerNames)
-            {
                 result |= LayerMask.NameToLayer(name);
-            }
             return result;
         }
         public static LayerMask LayerNumbersToMask(params LayerMask[] layerNumbers)
         {
             LayerMask result = 0;
             foreach (var layer in layerNumbers)
-            {
                 result |= layer;
-            }
             return result;
         }
 
@@ -266,9 +262,7 @@ namespace Icing
                 {
                     string layerName = LayerMask.LayerToName(i);
                     if (!string.IsNullOrEmpty(layerName))
-                    {
                         output.Add(layerName);
-                    }
                 }
             }
             return output.ToArray();
