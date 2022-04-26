@@ -5,11 +5,11 @@ using UnityEngine;
 public class PinkPlayer : MonoBehaviour
 {
     // Character Data
-    private BPCC_BodyData bodyData = new BPCC_BodyData();
-    [SerializeField] private BPCC_Gravity gravity = new BPCC_Gravity();
-    [SerializeField] private BPCC_GroundDetection groundDetection = new BPCC_GroundDetection();
-    [SerializeField] private BPCC_Walk walk = new BPCC_Walk();
-    [SerializeField] private BPCC_Jump jump = new BPCC_Jump();
+    private BPCC_BodyData bodyData = new();
+    [SerializeField] private BPCC_Gravity gravity = new();
+    [SerializeField] private BPCC_GroundDetection groundDetection = new();
+    [SerializeField] private BPCC_Walk walk = new();
+    [SerializeField] private BPCC_Jump jump = new();
 
     // Movement Vector
     private Vector2 controlVector;
@@ -27,36 +27,17 @@ public class PinkPlayer : MonoBehaviour
             collider      : GetComponent<BoxCollider2D>(),
             oneWayCollider: transform.GetChild(0).GetComponent<BoxCollider2D>()
         );
-        gravity.Init(
-            bodyData,
-            gravityAccel: -40,
-            maxFallSpeed: -30
-        );
-        groundDetection.Init(
-            bodyData,
-            maxDetectCount: 50,
-            maxWalkAngle  : 89,
-            snapLength    : 0.1f,
-            innerGap      : 0.1f
-        );
-        walk.Init(
-            maxSpeed: 7,
-            minSpeed: 3f,
-            accel: 20,
-            decel: 50,
-            changeDirPreserveSpeed: 0.5f
-        );
-        jump.Init(
-            bodyData,
-            airJumpCount: 1
-        );
-
-        // Late Fixed Update
-        StartCoroutine(LateFixedUpdate());
+        gravity.Init(bodyData);
+        groundDetection.Init(bodyData);
+        walk.Init();
+        jump.Init(bodyData);
 
         // Get Visual
         gameObject.GetComponent(out animator);
         transform.GetChild(1).gameObject.GetComponent(out sr);
+
+        // Late Fixed Update
+        StartCoroutine(LateFixedUpdate());
     }
     private void Update()
     {
@@ -66,9 +47,37 @@ public class PinkPlayer : MonoBehaviour
     }
     private void LateUpdate()
     {
+        // Animation and Visual
         if (jump.IsJumping)
         {
-            animator.SetDuration(jump.JumpCurve.EndTime, "Jump");
+        
+            if (jump.InputPressed)
+            {
+                // restart animation from the start
+                animator.SetDuration(jump.JumpCurve.EndTime, "Jump");
+                animator.Play("Jump", 0, 0);
+            }
+            else
+            {
+                // continue animation
+                animator.Play("Jump");
+            }
+        }
+        else
+        {
+            animator.ResetSpeed();
+            if (groundDetection.OnGround)
+            {
+               animator.Play(
+                   walk.InputDir != 0 && groundDetection.slideDownVector == Vector2.zero 
+                   ? "Walk" 
+                   : "Idle"
+                );
+            }
+            else
+            {
+                animator.Play("Airborne");
+            }
         }
     }
     private void FixedUpdate()
@@ -128,30 +137,6 @@ public class PinkPlayer : MonoBehaviour
 
             // Flip Sprite
             sr.flipX = walk.MoveDir != 1;
-        }
-
-        // Animation and Visual
-        if (jump.IsJumping)
-        {
-            if (jump.InputPressed)
-                animator.Play("Jump", 0, 0);
-            else
-                animator.Play("Jump");
-        }
-        else
-        {
-            animator.ResetSpeed();
-            if (groundDetection.OnGround)
-            {
-                if (walk.InputDir != 0 && groundDetection.slideDownVector == Vector2.zero)
-                    animator.Play("Walk");
-                else
-                    animator.Play("Idle");
-            }
-            else
-            {
-                animator.Play("Airborne");
-            }
         }
 
         // Reset Jump Input

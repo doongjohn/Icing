@@ -28,6 +28,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2769284671554007253}
   m_RootOrder: 0
@@ -104,6 +105,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2769284671554007253}
   m_RootOrder: 1
@@ -119,6 +121,7 @@ SpriteRenderer:
   m_CastShadows: 0
   m_ReceiveShadows: 0
   m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
@@ -189,6 +192,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 485969059}
   - {fileID: 2769284671517726201}
@@ -197,7 +201,7 @@ Transform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!95 &136333630
 Animator:
-  serializedVersion: 3
+  serializedVersion: 4
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -210,6 +214,7 @@ Animator:
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
   m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
   m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
@@ -274,8 +279,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gravity:
-    gravityAccel: 0
-    maxFallSpeed: 0
+    gravityAccel: -70
+    maxFallSpeed: -30
     value: 0
   groundDetection:
     maxDetectCount: 50
@@ -291,9 +296,9 @@ MonoBehaviour:
     slideDownVector: {x: 0, y: 0}
   walk:
     maxSpeed: 15
-    minSpeed: 3
+    minSpeed: 5
     accel: 20
-    decel: 50
+    decel: 70
     changeDirPreserveSpeed: 0.5
   jump:
     jumpCurve:
@@ -331,5 +336,5 @@ MonoBehaviour:
         m_PostInfinity: 2
         m_RotationOrder: 4
       curTime: 0
-    airJumpCount: 0
+    airJumpCount: 1
     curAirJumpCount: 0
