@@ -78,9 +78,6 @@ namespace Icing
     [Serializable]
     public class BPCC_GroundDetection
     {
-        // HACK: temp metraial
-        public Material material;
-
         struct BoxCastData
         {
             public Vector2 pos;
