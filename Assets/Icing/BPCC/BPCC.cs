@@ -78,6 +78,9 @@ namespace Icing
     [Serializable]
     public class BPCC_GroundDetection
     {
+        // HACK: temp metraial
+        public Material material;
+
         struct BoxCastData
         {
             public Vector2 pos;
@@ -86,21 +89,22 @@ namespace Icing
             public float dist;
         }
 
-        [SerializeField, Range(0, int.MaxValue)] 
+        [SerializeField, Range(0, int.MaxValue)]
         private int maxDetectCount = 50;
-        
+
         [SerializeField, Range(1, 89)]
         private float maxWalkAngle = 70f;
-        
-        [SerializeField, Range(0, int.MaxValue)] 
-        private float snapLength = 0.1f;
-        
-        [SerializeField, Range(0, int.MaxValue)] 
+
+        [SerializeField, Range(0, int.MaxValue)]
         private float innerGap = 0.1f;
-        
+
+        [SerializeField, Range(0, int.MaxValue)]
+        private float snapLength = 0.1f;
+
         [HideInInspector] public BPCC_BodyData bodyData;
         [SerializeField] private LayerMask solidLayer;
         [SerializeField] private LayerMask oneWayLayer;
+        private CircleCollider2D ccol;
 
         private float contactOffset;
         private Vector2 prevPos;
@@ -114,26 +118,22 @@ namespace Icing
 
         public int MaxDetectCount => maxDetectCount;
         public BPCC_GroundData GroundData => groundData;
-        public bool OnGround
-        { get; private set; } = false;
-        public bool OnSteepSlope
-        { get; private set; } = false;
+        public bool OnGround { get; private set; } = false;
+        public bool OnSteepSlope { get; private set; } = false;
 
         /// <summary>
         /// Initialize Ground Detection
         /// </summary>
         /// <param name="bodyData">BodyData of the character.</param>
-        /// <param name="maxDetectCount">Capacity of the BoxCast hit result array.</param>
-        /// <param name="maxWalkAngle">If a ground angle is bigger than maxWalkAngle, character will slide down.</param>
-        /// <param name="snapLength">If the character and ground are closer than or equal to snapLength, character will snap to the ground.</param>
-        /// <param name="innerGap">BoxCollider's size.y will shrink. (Increase this if the character acts weird on slope.)</param>
-        public void Init(BPCC_BodyData bodyData)
+        /// <param name="ccol">This Circle Collider will prevent the character from phasing through the ceiling.</param>
+        public void Init(BPCC_BodyData bodyData, CircleCollider2D ccol)
         {
             this.bodyData = bodyData;
+            this.ccol = ccol;
             maxDetectCount = Mathf.Max(maxDetectCount, 0);
             maxWalkAngle = Mathf.Clamp(maxWalkAngle, 0, 89);
-            snapLength = Mathf.Max(snapLength, 0);
             innerGap = Mathf.Max(innerGap, 0);
+            snapLength = Mathf.Max(snapLength, 0);
 
             contactOffset = Physics2D.defaultContactOffset;
             prevPos = bodyData.transform.position;
@@ -142,9 +142,7 @@ namespace Icing
 
             ApplyInnerGap();
 
-            // TODO:
-            // Set up one way collider surface arc
-            // depending on maxWalkAngle
+            // TODO: set one way collider surface arc depending on the maxWalkAngle
         }
 
         public void ApplyInnerGap()
@@ -155,30 +153,22 @@ namespace Icing
         }
         public void ResetInnerGap()
         {
-            bodyData.collider.size   = bodyData.oneWayCollider.size   = bodyData.colliderSize;
+            bodyData.collider.size = bodyData.oneWayCollider.size = bodyData.colliderSize;
             bodyData.collider.offset = bodyData.oneWayCollider.offset = Vector2.zero;
         }
 
         public void ResetData()
         {
             prevPos = bodyData.transform.position;
-            Array.Clear(hitBuffer, 0, hitBuffer.Length);
+            // Array.Clear(hitBuffer, 0, hitBuffer.Length);
             groundData.Reset();
             slideDownVector = Vector2.zero;
             OnGround = false;
             OnSteepSlope = false;
         }
-        public void DetectGround(bool detectCondition, float slideAccel, float maxSlideSpeed)
+        public void DetectGround(bool detectCondition, BPCC_Gravity gravity)
         {
-            // NOTE:
-            // 1. 속도가 *너무* 빠르면 이상한 결과가 나올 수 있다.
-
-            // FIXME:
-            // 1. innerGap 만큼 천장을 무시함.
-            //    (흠... 어떻게 고치지...)
-
-            // TODO:
-            // 1. 단방향 플랫폼이 몸에 겹쳐져 있을 경우 무시함. (어떻게 하지??)
+            // TODO: 단방향 플랫폼이 몸에 겹쳐져 있을 경우 무시함. (어떻게 하지??)
 
             if (!detectCondition)
             {
@@ -208,7 +198,7 @@ namespace Icing
 
             #region Get Ground Method
 
-            RaycastHit2D BoxCastGetHighestGround(BoxCastData castData, bool skipInngerGapUp = false)
+            RaycastHit2D BoxCastGetHighestGround(BoxCastData castData, bool skipInngerGapUp = true)
             {
                 RaycastHit2D hitData = finalHitData;
                 int hitCount = Physics2D.BoxCastNonAlloc(castData.pos, castData.size, 0f, castData.dir, hitBuffer, castData.dist, groundLayer);
@@ -216,8 +206,10 @@ namespace Icing
                 {
                     if (ignoreGrounds.Contains(hitBuffer[i].collider))
                         continue;
+
                     if (hitBuffer[i].normal.y <= 0)
                         continue;
+
                     if (skipInngerGapUp && hitBuffer[i].point.y > pos.y - halfSize.y + innerGap)
                         continue;
 
@@ -244,18 +236,24 @@ namespace Icing
 
             void GetGround_StraightDown()
             {
-                Vector2 p = pos;
-                p.y += innerGap;
+                var dist = innerGap + snapLength + (
+                    OnGround
+                    ? prevVector.y > 0
+                        ? prevDistY
+                        : 0
+                    : prevVector.y < 0
+                        ? prevDistY
+                        : 0
+                );
 
-                RaycastHit2D hitData = BoxCastGetHighestGround(
-                    new BoxCastData()
+                var hitData = BoxCastGetHighestGround(
+                    new()
                     {
-                        pos = p,
+                        pos = pos.Add(y: innerGap),
                         size = size,
                         dir = Vector2.down,
-                        dist = innerGap + snapLength + (prevVector.y > 0 ? prevDistY : 0)
-                    }, 
-                    true
+                        dist = dist
+                    }
                 );
 
                 if (hitData.collider == null)
@@ -266,12 +264,16 @@ namespace Icing
 
             void GetGround_DownSlope()
             {
+                //  ---->
+                //  ┗┛
+                //  /\└┘
+                // /  \
                 // detect the slope that is steeper than the current ground
 
                 float downDist = Mathf.Max(vel.y * Time.deltaTime, contactOffset);
 
-                RaycastHit2D hitData = BoxCastGetHighestGround(
-                    new BoxCastData()
+                var hitData = BoxCastGetHighestGround(
+                    new()
                     {
                         pos = pos.Add(y: -downDist * 0.5f),
                         size = size.Add(y: downDist),
@@ -285,29 +287,25 @@ namespace Icing
 
                 // 낮은 경사의 오차를 해결하기 위함.
                 if (hitData.normal.x == 0)
-                {
-                    Vector2 normal = hitData.normal;
-                    normal.x = Mathf.Sign(prevVector.x) * float.Epsilon;
-                    hitData.normal = normal;
-                }
+                    hitData.normal = hitData.normal.Change(x: Mathf.Sign(prevVector.x) * float.Epsilon);
 
                 finalHitData = hitData;
             }
 
             void GetGround_Cross()
             {
+                //  ----->
+                //  ┗┛/\└┘
+                //   /  \
                 // prevents shooting off from the slope while walking up the slope
-                
-                Vector2 p = pos;
-                p.y = prevPos.y;
-                
-                RaycastHit2D hitData = BoxCastGetHighestGround(
-                    new BoxCastData()
+
+                var hitData = BoxCastGetHighestGround(
+                    new()
                     {
-                        pos = p,
+                        pos = pos.Change(y: prevPos.y),
                         size = size,
                         dir = Vector2.left * prevVector.x,
-                        dist = prevDistX + size.x * 0.9f
+                        dist = prevDistX
                     }
                 );
 
@@ -319,8 +317,9 @@ namespace Icing
 
             #endregion
 
-            #region Get Ground Data
+            #region Get Final hit data
 
+            // apparently this exact order is very important
             if (prevDistX != 0)
                 GetGround_DownSlope();
 
@@ -332,15 +331,14 @@ namespace Icing
             // \    /
             //  \┗┛/
             //   \/
-            // if the character is touching both slopes (in a valley)
-            // set the ground normal to Vector2.up
+            // if the character is in a valley
             if (finalHitData.collider != null && finalHitData.normal.y != 0 && finalHitData.normal.y > 0)
             {
                 var colR = Physics2D.Raycast(pos.Add(x: halfSize.x), Vector2.down, halfSize.y, groundLayer).collider;
                 var colL = Physics2D.Raycast(pos.Add(x: -halfSize.x), Vector2.down, halfSize.y, groundLayer).collider;
-                inValley = 
-                    colR != null && !ignoreGrounds.Contains(colR) && 
-                    colL != null && !ignoreGrounds.Contains(colL);
+                inValley =
+                    colR && !ignoreGrounds.Contains(colR) &&
+                    colL && !ignoreGrounds.Contains(colL);
             }
 
             #endregion
@@ -367,10 +365,12 @@ namespace Icing
 
                 #region Snap To Ground
 
-                Vector3 snapPos = bodyData.transform.position;
-                snapPos.y = groundData.hitPoint.Value.y + halfSize.y;
+                Vector2 snapPos = bodyData.transform.position;
 
-                if (groundData.normal.Value.x != 0 && prevDirX != 0)
+                if (prevDistY != 0)
+                    snapPos.y = groundData.hitPoint.Value.y + halfSize.y;
+
+                if (prevDirX != 0 && groundData.normal.Value.x != 0)
                     snapPos.x = groundData.hitPoint.Value.x + (halfSize.x * Mathf.Sign(groundData.normal.Value.x));
 
                 bodyData.transform.position = snapPos;
@@ -395,7 +395,7 @@ namespace Icing
 
                         slideDownVector =
                             Vector3.Cross(crossDir, groundData.normal.Value).normalized *
-                            Mathf.Max(vel.y + (slideAccel * Time.deltaTime), maxSlideSpeed);
+                            Mathf.Max(vel.y + (gravity.gravityAccel * Time.deltaTime), gravity.maxFallSpeed);
                     }
                 }
 
@@ -404,253 +404,28 @@ namespace Icing
 
             #endregion
 
+            #region Circle Collider
+
+            // FIXME: this can collide with one way grounds
+            // so... I need to rework one way ground handling
+            ccol.offset = ccol.offset.Change(y: 0);
+            if (OnGround)
+            {
+                pos = bodyData.transform.position;
+                var r = ccol.radius;
+                var hit = Physics2D.CircleCast(pos, r + contactOffset * 2, Vector2.down, halfSize.y, groundLayer);
+                if (hit.collider != null)
+                {
+                    var colMoveDist = pos.y - (hit.point.y + (hit.normal.y * r));
+                    ccol.offset = ccol.offset.Change(y: -colMoveDist);
+                }
+            }
+
+            #endregion
+
             // Update Previous Position
             prevPos = bodyData.transform.position;
         }
-        
-        public void GetInput_FallThrough(KeyCode keyCode)
-        {
-            if (Input.GetKeyDown(keyCode))
-                inputFallThrough = true;
-        }
-        public void FallThrough()
-        {
-            #region Full Overlap Box
-
-            Collider2D[] fullOverlap =
-                Physics2D.OverlapBoxAll(
-                    bodyData.transform.position,
-                    bodyData.Size,
-                    0f,
-                    oneWayLayer);
-
-            #endregion
-
-            #region Enable Collsion
-
-            if (fullOverlap.Length != 0)
-            {
-                for (int i = 0; i < fullOverlap.Length; i++)
-                {
-                    if (ignoreGrounds.Contains(fullOverlap[i]))
-                        continue;
-
-                    Physics2D.IgnoreCollision(bodyData.oneWayCollider, fullOverlap[i], false);
-                    ignoreGrounds.Remove(fullOverlap[i]);
-                }
-            }
-            else
-            {
-                foreach (var item in ignoreGrounds)
-                    Physics2D.IgnoreCollision(bodyData.oneWayCollider, item, false);
-                ignoreGrounds.Clear();
-            }
-
-            #endregion
-
-            #region Disable Collision (Fall Through)
-
-            if (!inputFallThrough)
-                return;
-
-            inputFallThrough = false;
-
-            if (!OnGround)
-                return;
-
-            for (int i = 0; i < fullOverlap.Length; i++)
-            {
-                if (ignoreGrounds.Contains(fullOverlap[i]))
-                    continue;
-
-                Physics2D.IgnoreCollision(bodyData.oneWayCollider, fullOverlap[i], true);
-                ignoreGrounds.Add(fullOverlap[i]);
-            }
-
-            #endregion
-        }
-    }
-
-    public struct BPCC_SimpleGroundData
-    {
-        public Collider2D collider;
-        public GameObject gameObject;
-        public Vector2? hitPoint;
-
-        public void Reset()
-        {
-            collider = null;
-            gameObject = null;
-            hitPoint = null;
-        }
-    }
-    [Serializable]
-    public class BPCC_SimpleGroundDetection
-    {
-        // This Ground Detection doesn't work with slopes.
-        // But has better performance.
-
-        struct BoxCastData
-        {
-            public Vector2 pos;
-            public Vector2 size;
-            public Vector2 dir;
-            public float dist;
-        }
-
-        [SerializeField] private int maxDetectCount = 50;
-        [SerializeField] private float snapLength = 0.1f;
-        [SerializeField] private float innerGap = 0.1f;
-        [SerializeField] private BPCC_BodyData bodyData;
-        [SerializeField] private LayerMask solidLayer;
-        [SerializeField] private LayerMask oneWayLayer;
-
-        private LayerMask groundLayer;
-        private RaycastHit2D[] hitArray;
-        private HashSet<Collider2D> ignoreGrounds = new HashSet<Collider2D>();
-        private BPCC_SimpleGroundData groundData;
-        private bool inputFallThrough = false;
-
-        public int MaxDetectCount => maxDetectCount;
-        public BPCC_SimpleGroundData GroundData => groundData;
-        public bool OnGround
-        { get; private set; } = false;
-
-        /// <summary>
-        /// Initialize Ground Detection
-        /// </summary>
-        /// <param name="bodyData">BodyData of the character.</param>
-        /// <param name="maxDetectCount">Capacity of the BoxCast hit result array.</param>
-        /// <param name="snapLength">If the character and ground are closer than or equal to snapLength, character will snap to the ground.</param>
-        /// <param name="innerGap">BoxCollider's size.y will shrink. (Increase this if the character acts weird on slope.)</param>
-        public void Init(
-            BPCC_BodyData bodyData,
-            int maxDetectCount,
-            float snapLength,
-            float innerGap)
-        {
-            this.bodyData = bodyData;
-            this.maxDetectCount = Mathf.Max(maxDetectCount, 0);
-            this.snapLength = Mathf.Max(snapLength, 0);
-            this.innerGap = Mathf.Max(innerGap, 0);
-
-            groundLayer = LayerMaskHelper.Create(solidLayer, oneWayLayer);
-            hitArray = new RaycastHit2D[maxDetectCount];
-
-            ApplyInnerGap();
-        }
-
-        public void ApplyInnerGap()
-        {
-            float innerGap = this.innerGap / bodyData.transform.lossyScale.y;
-            bodyData.collider.size = bodyData.oneWayCollider.size = bodyData.colliderSize.Add(y: -innerGap);
-            bodyData.collider.offset = bodyData.oneWayCollider.offset = new Vector2(0, innerGap * 0.5f);
-        }
-        public void ResetInnerGap()
-        {
-            bodyData.collider.size = bodyData.oneWayCollider.size = bodyData.colliderSize;
-            bodyData.collider.offset = bodyData.oneWayCollider.offset = Vector2.zero;
-        }
-
-        public void ResetData()
-        {
-            Array.Clear(hitArray, 0, hitArray.Length);
-            groundData.Reset();
-            OnGround = false;
-        }
-        public void DetectGround(bool detectCondition, float slideAccel, float maxSlideSpeed)
-        {
-            if (!detectCondition)
-            {
-                ResetData();
-                return;
-            }
-
-            #region Current Data
-
-            RaycastHit2D finalHitData = new RaycastHit2D();
-            Vector2 pos = bodyData.transform.position;
-            Vector2 size = bodyData.Size;
-            Vector2 halfSize = size * 0.5f;
-
-            #endregion
-
-            #region Get Ground Data
-
-            RaycastHit2D GetHighestGround(BoxCastData castData)
-            {
-                RaycastHit2D hitData = finalHitData;
-                int hitCount = Physics2D.BoxCastNonAlloc(castData.pos, castData.size, 0f, castData.dir, hitArray, castData.dist, groundLayer);
-                for (int i = 0; i < hitCount; i++)
-                {
-                    if (ignoreGrounds.Contains(hitArray[i].collider))
-                        continue;
-                    if (hitArray[i].normal.y <= 0)
-                        continue;
-                    if (hitArray[i].point.y > pos.y - halfSize.y + innerGap)
-                        continue;
-
-                    // Note:
-                    // 떨어질 때 단방향 플랫폼 검사 안함.
-                    if (!OnGround && oneWayLayer.ContainsLayer(hitArray[i].collider.gameObject.layer))
-                        if (bodyData.rb2D.velocity.y <= 0 && hitArray[i].point.y > pos.y - halfSize.y)
-                            continue;
-
-                    if (hitData.collider == null || (hitData.collider != null && hitArray[i].point.y >= hitData.point.y))
-                        hitData = hitArray[i];
-                }
-                return hitData;
-            }
-            void GetGround_StraightDown()
-            {
-                RaycastHit2D hitData = GetHighestGround(
-                    new BoxCastData()
-                    {
-                        pos = pos.Add(y: size.y),
-                        size = size,
-                        dir = Vector2.down,
-                        dist = size.y + snapLength
-                    });
-
-                if (hitData.collider == null)
-                    return;
-
-                finalHitData = hitData;
-            }
-
-            GetGround_StraightDown();
-
-            #endregion
-
-            #region Set Ground Data
-
-            // Not on Ground
-            if (finalHitData.collider == null)
-            {
-                ResetData();
-            }
-            // On Ground
-            else
-            {
-                #region Set Ground Data
-
-                OnGround = true;
-                groundData.collider = finalHitData.collider;
-                groundData.gameObject = finalHitData.collider.gameObject;
-                groundData.hitPoint = finalHitData.point;
-
-                #endregion
-
-                #region Snap To Ground
-
-                bodyData.transform.position = 
-                    bodyData.transform.position.Change(y: groundData.hitPoint.Value.y + halfSize.y);
-
-                #endregion
-            }
-
-            #endregion
-        }
 
         public void GetInput_FallThrough(KeyCode keyCode)
         {
@@ -659,9 +434,6 @@ namespace Icing
         }
         public void FallThrough()
         {
-            // FIXME:
-            // 1. 단방향 플랫폼이 진행 바향에 있고 플레이어와 겹쳐 있으면 그 위로 올라가려고 함.
-
             #region Full Overlap Box
 
             Collider2D[] fullOverlap =
@@ -732,7 +504,6 @@ namespace Icing
         private int inputDir = 0;
         private int moveDir = 0;
         [HideInInspector] public float curWalkSpeed;
-
 
         public int InputDir => inputDir;
         public Vector2 WalkDir

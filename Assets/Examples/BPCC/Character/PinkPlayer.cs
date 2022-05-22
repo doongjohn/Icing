@@ -28,13 +28,16 @@ public class PinkPlayer : MonoBehaviour
     private void Awake()
     {
         bodyData.Init(
-            transform     : transform,
-            rb2D          : GetComponent<Rigidbody2D>(),
-            collider      : GetComponent<BoxCollider2D>(),
+            transform: transform,
+            rb2D: GetComponent<Rigidbody2D>(),
+            collider: GetComponent<BoxCollider2D>(),
             oneWayCollider: transform.GetChild(0).GetComponent<BoxCollider2D>()
         );
         gravity.Init(bodyData);
-        groundDetection.Init(bodyData);
+        groundDetection.Init(
+            bodyData: bodyData,
+            ccol: GetComponent<CircleCollider2D>()
+        );
         walk.Init();
         jump.Init(bodyData);
 
@@ -56,7 +59,7 @@ public class PinkPlayer : MonoBehaviour
         // Animation and Visual
         if (jump.IsJumping)
         {
-        
+
             if (jump.InputPressed)
             {
                 // restart animation from the start
@@ -77,7 +80,7 @@ public class PinkPlayer : MonoBehaviour
                 if (walk.InputDir == 0 || groundDetection.slideDownVector != Vector2.zero)
                 {
                     animator.Play("Idle");
-                } 
+                }
                 else if (walk.InputDir != 0)
                 {
                     if (walk.curWalkSpeed <= walk.maxSpeed * 0.6)
@@ -172,15 +175,11 @@ public class PinkPlayer : MonoBehaviour
             // Fall Through One Way Platform
             groundDetection.FallThrough();
 
-            // Note:
-            // In order to snap to the ground correctly
-            // DetectGround() method needs to run after internal physics update.
-
             // Detect Ground
             groundDetection.DetectGround(
                 detectCondition: !jump.IsJumping,
-                slideAccel     : gravity.gravityAccel,
-                maxSlideSpeed  : gravity.maxFallSpeed);
+                gravity: gravity
+            );
         }
     }
 }

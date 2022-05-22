@@ -174,6 +174,8 @@ GameObject:
   - component: {fileID: 136333630}
   - component: {fileID: 2769284671554007252}
   - component: {fileID: 2769284671554007255}
+  - component: {fileID: 7702529498253737664}
+  - component: {fileID: 363737809051029399}
   - component: {fileID: 2769284671554007254}
   m_Layer: 31
   m_Name: Pink Player
@@ -266,6 +268,41 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.3, y: 0.8}
   m_EdgeRadius: 0
+--- !u!58 &7702529498253737664
+CircleCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2769284671554007242}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 6200000, guid: 9ddc2217801656846b71df9dc2729e51, type: 2}
+  m_IsTrigger: 0
+  m_UsedByEffector: 1
+  m_UsedByComposite: 0
+  m_Offset: {x: 0, y: 0}
+  serializedVersion: 2
+  m_Radius: 0.15
+--- !u!251 &363737809051029399
+PlatformEffector2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2769284671554007242}
+  m_Enabled: 1
+  m_UseColliderMask: 1
+  m_ColliderMask:
+    serializedVersion: 2
+    m_Bits: 768
+  m_RotationalOffset: 0
+  m_UseOneWay: 1
+  m_UseOneWayGrouping: 0
+  m_SurfaceArc: 320
+  m_UseSideFriction: 0
+  m_UseSideBounce: 0
+  m_SideArc: 1
 --- !u!114 &2769284671554007254
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -283,9 +320,9 @@ MonoBehaviour:
     maxFallSpeed: -30
     value: 0
   groundDetection:
+    material: {fileID: 0}
     maxDetectCount: 50
     maxWalkAngle: 89
-    snapLength: 0.1
     innerGap: 0.1
     solidLayer:
       serializedVersion: 2
