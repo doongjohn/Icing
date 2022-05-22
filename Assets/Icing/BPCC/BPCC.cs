@@ -574,6 +574,8 @@ namespace Icing
     [Serializable]
     public class BPCC_Jump
     {
+        // FIXME: character flies up when hitting the angled ceiling
+
         public CountedBool CanJump = new();
         [SerializeField] private MovementCurve jumpCurve;
         [SerializeField] private BPCC_BodyData bodyData;

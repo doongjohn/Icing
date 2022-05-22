@@ -10,6 +10,8 @@ public class PinkPlayer : MonoBehaviour
     [SerializeField] private BPCC_GroundDetection groundDetection = new();
     [SerializeField] private BPCC_Walk walk = new();
     [SerializeField] private BPCC_Jump jump = new();
+    private float jumpAllowTime = 0.12f; // coyote time
+    private float jumpAllowTimer = 0;
 
     // Movement Vector
     private Vector2 controlVector;
@@ -59,7 +61,6 @@ public class PinkPlayer : MonoBehaviour
         // Animation and Visual
         if (jump.IsJumping)
         {
-
             if (jump.InputPressed)
             {
                 // restart animation from the start
@@ -95,6 +96,7 @@ public class PinkPlayer : MonoBehaviour
             }
             else
             {
+                jumpAllowTimer += Time.deltaTime;
                 animator.Play("Airborne");
             }
         }
@@ -117,14 +119,24 @@ public class PinkPlayer : MonoBehaviour
 
             // Reset Air Jump Count
             jump.ResetAirJumpCount();
+
+            jumpAllowTimer = 0;
         }
         // Not On Ground
         else
         {
             // Air Jump
-            if (jump.InputPressed && jump.CanAirJump)
+            if (jump.InputPressed)
             {
-                jump.StartAirJump();
+                if (jumpAllowTimer <= jumpAllowTime)
+                {
+                    jumpAllowTimer = jumpAllowTime + 1;
+                    jump.StartJump();
+                }
+                else if (jump.CanAirJump)
+                {
+                    jump.StartAirJump();
+                }
                 groundDetection.ResetData();
             }
             // Apply Gravity
